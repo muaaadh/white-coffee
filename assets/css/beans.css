@@ -1,1 +1,81 @@
-/* placeholder — replaced by the beans agent */
+/* ==========================================================================
+   White Coffee House — White Rewards bean emblem (pairs with assets/js/beans.js).
+   Builds on base.css tokens. The host box (.rewards__beans) is sized by the
+   site; everything here styles the layers beans.js adds inside it.
+   ========================================================================== */
+
+/* Low specificity on the host, so the site's own rules always win. */
+:where(.beans-host) { position: relative; }
+.beans-host.beans-interactive {
+  touch-action: pan-y pinch-zoom;           /* a vertical drag still scrolls the page */
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Soft porcelain light behind the beans (reads on cream and on paper). */
+.beans__glow {
+  position: absolute; inset: 0; z-index: 0;
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(closest-side, rgba(255, 253, 249, .95), rgba(255, 253, 249, .7) 55%, rgba(255, 253, 249, 0));
+  opacity: 0;
+  transition: opacity .9s var(--ease-out, ease);
+}
+
+/* Thin double ring, like the emblem. Drawn in once, when the pour starts. */
+.beans__ring {
+  position: absolute; inset: 0; z-index: 1;
+  width: 100%; height: 100%;
+  overflow: visible;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .4s var(--ease-out, ease);
+}
+.beans__ring circle {
+  fill: none;
+  stroke: var(--gold-300, #CDB283);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+  stroke-dasharray: 1 1;
+  stroke-dashoffset: 0;
+}
+.beans__ring circle + circle { stroke: var(--gold-200, #E4D3AE); }
+.beans-on .beans__glow,
+.beans-on .beans__ring { opacity: 1; }
+.beans-on .beans__ring circle { animation: beans-ring 1.8s var(--ease-out, ease) both; }
+.beans-on .beans__ring circle + circle { animation-delay: .2s; }
+@keyframes beans-ring { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+
+/* The canvas is sized + placed by beans.js (the box plus a small margin). */
+.beans__canvas {
+  position: absolute; z-index: 2;
+  display: block;
+  max-width: none;                          /* base.css caps canvas at 100% — this one is wider on purpose */
+  pointer-events: none;
+}
+
+/* "Move your cursor through the beans" — plain, quiet, gone after the first play. */
+.beans__hint {
+  position: absolute; z-index: 3;
+  left: 50%; bottom: 8%;
+  transform: translateX(-50%);
+  margin: 0;
+  max-width: 72%;
+  font-family: var(--font-body, system-ui, sans-serif);
+  font-size: var(--fs-xs, .8125rem);
+  font-weight: 500;
+  line-height: 1.3;
+  text-align: center;
+  color: var(--muted, #6F6357);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .7s var(--ease-out, ease);
+}
+.beans__hint.is-shown { opacity: 1; }
+
+@media (prefers-reduced-motion: reduce) {
+  .beans-on .beans__ring circle { animation: none; }
+  .beans__hint { display: none; }
+}

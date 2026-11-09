@@ -3,56 +3,132 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>White Coffee House — hero prototype A, a latte you can stir</title>
-  <meta name="description" content="White Coffee House, a cozy new café in Hulhumalé, Maldives. Good coffee. Great food. Better vibes. Open every day from 4 PM to midnight.">
+  <title>White Coffee House — Coffee, food & good vibes in Hulhumalé</title>
+  <meta name="description" content="White Coffee House is a cozy new café in Hulhumalé, Maldives. Good coffee, great food and better vibes, open every day from 4 PM to midnight. Join White Rewards and earn beans on every visit.">
+  <meta name="robots" content="noindex, nofollow">
   <meta name="theme-color" content="#FBF8F2">
-  <link rel="icon" href="assets/icons/favicon-32.png" sizes="32x32" type="image/png">
+  <meta name="color-scheme" content="light">
+  <link rel="canonical" href="https://muaaadh.github.io/white-coffee/">
+
+  <link rel="icon" href="favicon.ico" sizes="any">
+  <link rel="icon" href="assets/icons/favicon-32.png" type="image/png" sizes="32x32">
+  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
+
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="White Coffee House">
+  <meta property="og:title" content="White Coffee House — Coffee, food & good vibes in Hulhumalé">
+  <meta property="og:description" content="A cozy new café in Hulhumalé, Maldives. Open every day from 4 PM to midnight.">
+  <meta property="og:url" content="https://muaaadh.github.io/white-coffee/">
+  <meta property="og:image" content="https://muaaadh.github.io/white-coffee/assets/icons/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="The gold White Coffee House emblem on a warm white background">
+  <meta property="og:locale" content="en_GB">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="White Coffee House — Coffee, food & good vibes in Hulhumalé">
+  <meta name="twitter:description" content="A cozy new café in Hulhumalé, Maldives. Open every day from 4 PM to midnight.">
+  <meta name="twitter:image" content="https://muaaadh.github.io/white-coffee/assets/icons/og-image.png">
+  <meta name="twitter:image:alt" content="The gold White Coffee House emblem on a warm white background">
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "CafeOrCoffeeShop",
+    "name": "White Coffee House",
+    "slogan": "Good coffee. Great food. Better vibes.",
+    "description": "A cozy new café in Hulhumalé, Maldives, serving coffee, bagels, brunch plates and sweets.",
+    "url": "https://muaaadh.github.io/white-coffee/",
+    "image": "https://muaaadh.github.io/white-coffee/assets/icons/og-image.png",
+    "logo": "https://muaaadh.github.io/white-coffee/assets/icons/icon-512.png",
+    "address": { "@type": "PostalAddress", "addressLocality": "Hulhumalé", "addressCountry": "MV" },
+    "openingHours": "Mo-Su 16:00-24:00",
+    "servesCuisine": ["Coffee", "Breakfast"],
+    "sameAs": ["https://www.instagram.com/whitecoffeehousemv/", "https://www.tiktok.com/@whitecoffeehouse.mv"]
+  }
+  </script>
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600&family=Kalnia:wght@300;400;500&family=Manrope:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/site.css">
   <link rel="stylesheet" href="assets/css/hero.css">
-  <script>document.documentElement.classList.add('js');</script>
+  <link rel="stylesheet" href="assets/css/beans.css">
+  <script>(function(d){d.classList.add('js');setTimeout(function(){if(!d.classList.contains('site-ready'))d.classList.add('no-motion')},4000)})(document.documentElement);</script>
+  <script src="assets/js/store.js" defer></script>
   <script src="assets/js/hero.js" defer></script>
+  <script src="assets/js/beans.js" defer></script>
+  <script src="assets/js/site.js" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
 
-  <!-- ============ Header (prototype of the final site header) ============ -->
-  <header class="site-header" data-header>
-    <div class="site-header__inner container">
-      <a class="brand" href="./" aria-label="White Coffee House, home">
+  <!-- ============ Header (owned by site.css / site.js) ============ -->
+  <header class="hdr" id="site-header" data-header>
+    <div class="hdr__inner container">
+      <!-- The toggle comes before the nav in DOM and tab order -->
+      <button class="nav-toggle" id="menu-btn" type="button" aria-expanded="false" aria-controls="menu-sheet" aria-label="Open navigation" data-menu-btn>
+        <span class="nav-toggle__bar" aria-hidden="true"></span><span class="nav-toggle__bar" aria-hidden="true"></span>
+      </button>
+
+      <a class="brand hdr__brand" href="#top" aria-label="White Coffee House, back to top">
         <img class="brand__mark" src="assets/img/logo-mark.svg" alt="" width="40" height="40">
-        <span class="brand__name"><small>White</small>Coffee House</span>
+        <span class="brand__name">White Coffee House</span>
       </a>
 
-      <nav class="site-nav" id="site-nav" aria-label="Main">
-        <ul class="site-nav__list" role="list">
-          <li><a class="site-nav__link" href="#menu">Menu</a></li>
-          <li><a class="site-nav__link" href="#rewards">Rewards</a></li>
-          <li><a class="site-nav__link" href="#visit">Visit</a></li>
+      <nav class="hdr__nav" id="site-nav" aria-label="Main">
+        <ul class="hdr__list" role="list">
+          <li><a class="hdr__link" href="#menu" data-nav="menu">Menu</a></li>
+          <li><a class="hdr__link" href="#rewards" data-nav="rewards">Rewards</a></li>
+          <li><a class="hdr__link" href="#space" data-nav="space">The space</a></li>
+          <li><a class="hdr__link" href="#visit" data-nav="visit">Visit</a></li>
         </ul>
-        <p class="site-nav__meta">Open every day, 4 PM to midnight · Hulhumalé</p>
       </nav>
 
-      <div class="site-header__actions">
-        <a class="btn btn--ghost btn--sm portal-btn" href="portal/">
-          <svg class="portal-btn__icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><circle cx="8" cy="5.4" r="2.6"/><path d="M2.8 13.6c.7-2.5 2.8-3.9 5.2-3.9s4.5 1.4 5.2 3.9"/></svg>
-          <span>Customer<span class="portal-btn__word"> portal</span></span>
+      <div class="hdr__actions">
+        <a class="btn btn--ghost btn--sm hdr-btn" href="portal/" aria-label="Customer portal">
+          <svg class="hdr-btn__icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><circle cx="8" cy="5.4" r="2.6"/><path d="M2.8 13.6c.7-2.5 2.8-3.9 5.2-3.9s4.5 1.4 5.2 3.9"/></svg>
+          <span>Customer<span class="hdr-btn__long"> portal</span></span>
         </a>
-        <a class="btn btn--sm portal-btn portal-btn--dark" href="admin/">
-          <svg class="portal-btn__icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><rect x="2.5" y="2.5" width="4.6" height="4.6" rx="1.2"/><rect x="8.9" y="2.5" width="4.6" height="4.6" rx="1.2"/><rect x="2.5" y="8.9" width="4.6" height="4.6" rx="1.2"/><rect x="8.9" y="8.9" width="4.6" height="4.6" rx="1.2"/></svg>
-          <span>Admin<span class="portal-btn__word"> portal</span></span>
+        <a class="btn btn--sm hdr-btn hdr-btn--dark" href="admin/" aria-label="Admin portal">
+          <svg class="hdr-btn__icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><rect x="2.5" y="2.5" width="4.6" height="4.6" rx="1.2"/><rect x="8.9" y="2.5" width="4.6" height="4.6" rx="1.2"/><rect x="2.5" y="8.9" width="4.6" height="4.6" rx="1.2"/><rect x="8.9" y="8.9" width="4.6" height="4.6" rx="1.2"/></svg>
+          <span>Admin<span class="hdr-btn__long"> portal</span></span>
         </a>
-        <button class="menu-btn" type="button" aria-expanded="false" aria-controls="site-nav" aria-label="Open menu" data-menu-btn>
-          <span class="menu-btn__bar"></span><span class="menu-btn__bar"></span>
-        </button>
       </div>
     </div>
   </header>
 
+  <!-- Mobile menu sheet (≤ 820px) -->
+  <div class="sheet" id="menu-sheet" data-menu-sheet>
+    <div class="sheet__inner container">
+      <nav class="sheet__nav" aria-label="Site menu">
+        <ul class="sheet__list" role="list">
+          <li><a class="sheet__link" href="#menu" data-nav="menu">Menu</a></li>
+          <li><a class="sheet__link" href="#rewards" data-nav="rewards">Rewards</a></li>
+          <li><a class="sheet__link" href="#space" data-nav="space">The space</a></li>
+          <li><a class="sheet__link" href="#visit" data-nav="visit">Visit</a></li>
+        </ul>
+      </nav>
+      <div class="sheet__portals">
+        <a class="sheet__portal" href="portal/">
+          <svg class="sheet__portal-icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><circle cx="8" cy="5.4" r="2.6"/><path d="M2.8 13.6c.7-2.5 2.8-3.9 5.2-3.9s4.5 1.4 5.2 3.9"/></svg>
+          <span class="sheet__portal-text"><strong>Customer portal</strong><span>Your card, beans and rewards</span></span>
+        </a>
+        <a class="sheet__portal sheet__portal--dark" href="admin/">
+          <svg class="sheet__portal-icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><rect x="2.5" y="2.5" width="4.6" height="4.6" rx="1.2"/><rect x="8.9" y="2.5" width="4.6" height="4.6" rx="1.2"/><rect x="2.5" y="8.9" width="4.6" height="4.6" rx="1.2"/><rect x="8.9" y="8.9" width="4.6" height="4.6" rx="1.2"/></svg>
+          <span class="sheet__portal-text"><strong>Admin portal</strong><span>For the café team</span></span>
+        </a>
+      </div>
+      <p class="sheet__meta">
+        <span class="status-pill" data-open-status><span class="status-pill__dot" aria-hidden="true"></span><span data-status-text>Open every day, 4 PM to midnight</span></span>
+        <span class="sheet__meta-line">Every day, 4 PM to midnight · Hulhumalé</span>
+      </p>
+    </div>
+  </div>
+
   <main id="main">
-    <!-- ============ Hero ============ -->
-    <section class="hero" aria-labelledby="hero-title" data-hero>
+    <!-- HERO:START -->
+    <section class="hero" id="top" aria-labelledby="hero-title" data-hero>
       <div class="hero__inner container">
         <div class="hero__copy">
           <p class="hero__wordmark wordmark" aria-hidden="true">White Coffee House</p>
@@ -69,6 +145,7 @@
               Join White Rewards
             </a>
           </div>
+          <p class="hero__status"><span class="status-pill" data-open-status><span class="status-pill__dot" aria-hidden="true"></span><span data-status-text>Open every day, 4 PM to midnight</span></span></p>
         </div>
 
         <div class="hero__visual">
@@ -225,32 +302,350 @@
       </div>
 
       <div class="hero__foot container">
-        <a class="scroll-cue" href="#menu">
+        <a class="scroll-cue" href="#about">
           <span class="scroll-cue__track" aria-hidden="true"><span class="scroll-cue__dot"></span></span>
           <span>Scroll</span>
         </a>
       </div>
     </section>
+    <!-- HERO:END -->
 
-    <!-- ============ Placeholder content (so scrolling can be tested) ============ -->
-    <section class="next" id="menu" data-reveal>
-      <div class="container next__inner">
-        <h2 class="next__title display" data-reveal-item>From your first sip to your last bite</h2>
-        <p class="next__text lede" data-reveal-item>Placeholder section. The menu, White Rewards and the visit details will follow here in the full site.</p>
-        <ul class="next__list" role="list">
-          <li class="next__item card" id="rewards" data-reveal-item>
-            <h3 class="next__item-title">White Rewards</h3>
-            <p class="muted">Collect beans with every order and swap them for a free drink.</p>
+    <!-- ============ Intro ============ -->
+    <section class="intro" id="about" aria-labelledby="about-title">
+      <div class="container intro__inner">
+        <h2 class="visually-hidden" id="about-title">About White Coffee House</h2>
+        <p class="intro__statement" data-wordfill>From your first sip to your last bite, there’s something special waiting for you.</p>
+        <ul class="facts" role="list" data-reveal>
+          <li class="fact rv">
+            <svg class="ic fact__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>
+            <span>Open daily, 4&nbsp;PM – midnight</span>
           </li>
-          <li class="next__item card" id="visit" data-reveal-item>
-            <h3 class="next__item-title">Visit</h3>
-            <p class="muted">Hulhumalé, Maldives. Open every day from 4 PM to midnight.</p>
+          <li class="fact rv">
+            <svg class="ic fact__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0C18.5 15.4 12 21 12 21Z"/><circle cx="12" cy="10" r="2.25"/></svg>
+            <span>Hulhumalé, Maldives</span>
+          </li>
+          <li class="fact rv">
+            <svg class="ic fact__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4.5 9.5h11.5v3.75a5 5 0 0 1-5 5H9.5a5 5 0 0 1-5-5V9.5Z"/><path d="M16 10.75h1.4a2.35 2.35 0 0 1 0 4.7H15.6"/><path d="M3.5 21h14"/><path d="M8 3.25c-.7.9.7 1.85 0 2.75M11.75 3.25c-.7.9.7 1.85 0 2.75"/></svg>
+            <span>Coffee, bagels, brunch plates &amp; sweets</span>
           </li>
         </ul>
       </div>
     </section>
+
+    <!-- ============ Favourites ============ -->
+    <section class="favs" aria-labelledby="favs-title">
+      <div class="container">
+        <div class="sec-head sec-head--row" data-reveal>
+          <div class="sec-head__text">
+            <h2 class="h2" id="favs-title"><span class="mask"><span class="mask__in">House favourites</span></span></h2>
+            <p class="sec-head__lede rv">Two coffees, a plate and something sweet. A good place to start.</p>
+          </div>
+          <a class="link-arrow rv" href="#menu">See the full menu<svg class="ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+        </div>
+        <ul class="favs__list" role="list" data-reveal data-favs>
+          <li class="fav rv" data-fav="whitelatte">
+            <a class="fav__link" href="#menu" data-cat="coffee">
+              <span class="ph ph--fav"><span class="ph__in" data-parallax><img src="assets/img/photos/fav-white-latte-800.webp" srcset="assets/img/photos/fav-white-latte-800.webp 800w, assets/img/photos/fav-white-latte-1600.webp 1600w" sizes="(min-width: 900px) 290px, (min-width: 600px) 40vw, 74vw" width="800" height="1000" alt="A latte with a heart poured in the foam, in a white cup on a marble table" loading="lazy" decoding="async"></span></span>
+              <div class="fav__meta"><h3 class="fav__name" data-f="name">The White Latte</h3><span class="fav__price num" data-f="price">MVR 75</span></div>
+            </a>
+          </li>
+          <li class="fav rv" data-fav="icedspanish">
+            <a class="fav__link" href="#menu" data-cat="cold">
+              <span class="ph ph--fav"><span class="ph__in" data-parallax><img src="assets/img/photos/fav-iced-spanish-800.webp" srcset="assets/img/photos/fav-iced-spanish-800.webp 800w, assets/img/photos/fav-iced-spanish-1600.webp 1600w" sizes="(min-width: 900px) 290px, (min-width: 600px) 40vw, 74vw" width="800" height="1000" alt="A layered iced Spanish latte in a clear glass" loading="lazy" decoding="async"></span></span>
+              <div class="fav__meta"><h3 class="fav__name" data-f="name">Iced Spanish latte</h3><span class="fav__price num" data-f="price">MVR 75</span></div>
+            </a>
+          </li>
+          <li class="fav rv" data-fav="avotoast">
+            <a class="fav__link" href="#menu" data-cat="food">
+              <span class="ph ph--fav"><span class="ph__in" data-parallax><img src="assets/img/photos/fav-avocado-toast-800.webp" srcset="assets/img/photos/fav-avocado-toast-800.webp 800w, assets/img/photos/fav-avocado-toast-1600.webp 1600w" sizes="(min-width: 900px) 290px, (min-width: 600px) 40vw, 74vw" width="800" height="1000" alt="Avocado toast on sourdough with a poached egg, on a white plate" loading="lazy" decoding="async"></span></span>
+              <div class="fav__meta"><h3 class="fav__name" data-f="name">Avocado toast</h3><span class="fav__price num" data-f="price">MVR 115</span></div>
+            </a>
+          </li>
+          <li class="fav rv" data-fav="almondcroissant">
+            <a class="fav__link" href="#menu" data-cat="sweets">
+              <span class="ph ph--fav"><span class="ph__in" data-parallax><img src="assets/img/photos/fav-almond-croissant-800.webp" srcset="assets/img/photos/fav-almond-croissant-800.webp 800w, assets/img/photos/fav-almond-croissant-1600.webp 1600w" sizes="(min-width: 900px) 290px, (min-width: 600px) 40vw, 74vw" width="800" height="1000" alt="Almond croissants topped with flaked almonds on a marble tray" loading="lazy" decoding="async"></span></span>
+              <div class="fav__meta"><h3 class="fav__name" data-f="name">Almond croissant</h3><span class="fav__price num" data-f="price">MVR 60</span></div>
+            </a>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ============ Menu ============ -->
+    <section class="menu" id="menu" aria-labelledby="menu-title">
+      <div class="container">
+        <div class="sec-head" data-reveal>
+          <h2 class="h2" id="menu-title"><span class="mask"><span class="mask__in">Menu</span></span></h2>
+          <p class="sec-head__lede rv">Prices in MVR. Our full menu is at the counter.</p>
+        </div>
+        <div class="menu__body" data-reveal>
+          <div class="menu__main rv">
+            <div class="menu__tabs" role="tablist" aria-label="Menu categories" data-menu-tabs></div>
+            <div class="menu__panels" data-menu-panels>
+              <!--MENU:PANELS-->
+            </div>
+          </div>
+          <figure class="menu__photo rv" aria-hidden="true">
+            <span class="ph ph--menu"><span class="ph__in" data-menu-photos>
+              <img data-cat="coffee" class="is-active" src="assets/img/photos/menu-coffee-800.webp" srcset="assets/img/photos/menu-coffee-800.webp 800w, assets/img/photos/menu-coffee-1600.webp 1600w" sizes="(min-width: 1024px) 420px, 1px" width="800" height="1000" alt="" loading="lazy" decoding="async">
+              <img data-cat="cold" src="assets/img/photos/menu-cold-800.webp" srcset="assets/img/photos/menu-cold-800.webp 800w, assets/img/photos/menu-cold-1600.webp 1600w" sizes="(min-width: 1024px) 420px, 1px" width="800" height="1000" alt="" loading="lazy" decoding="async">
+              <img data-cat="notcoffee" src="assets/img/photos/menu-notcoffee-800.webp" srcset="assets/img/photos/menu-notcoffee-800.webp 800w, assets/img/photos/menu-notcoffee-1600.webp 1600w" sizes="(min-width: 1024px) 420px, 1px" width="800" height="1000" alt="" loading="lazy" decoding="async">
+              <img data-cat="food" src="assets/img/photos/menu-food-800.webp" srcset="assets/img/photos/menu-food-800.webp 800w, assets/img/photos/menu-food-1600.webp 1600w" sizes="(min-width: 1024px) 420px, 1px" width="800" height="1000" alt="" loading="lazy" decoding="async">
+              <img data-cat="sweets" src="assets/img/photos/menu-sweets-800.webp" srcset="assets/img/photos/menu-sweets-800.webp 800w, assets/img/photos/menu-sweets-1600.webp 1600w" sizes="(min-width: 1024px) 420px, 1px" width="800" height="1000" alt="" loading="lazy" decoding="async">
+            </span></span>
+          </figure>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ White Rewards ============ -->
+    <section class="rewards" id="rewards" aria-labelledby="rewards-title">
+      <div class="container">
+
+        <div class="rw-intro">
+          <div class="rw-intro__copy" data-reveal>
+            <h2 class="h2" id="rewards-title"><span class="mask"><span class="mask__in">White Rewards</span></span></h2>
+            <p class="lede rw-intro__lede rv" data-program-lede>Earn beans every time you visit — 1 bean for every MVR 5. Every 10th drink is on us.</p>
+            <div class="btn-row rv">
+              <a class="btn btn--gold" href="portal/?join=1">Join free</a>
+              <a class="btn btn--ghost" href="portal/">Sign in</a>
+            </div>
+          </div>
+          <figure class="rw-beans" data-reveal>
+            <div class="rw-beans__frame rv">
+              <div class="rewards__beans" data-beans aria-hidden="true">
+                <img class="rewards__beans-fallback" src="assets/img/logo-mark.svg" alt="" width="364" height="364" loading="lazy" decoding="async">
+              </div>
+            </div>
+            <figcaption class="rw-beans__cap rv">Collect beans with every visit</figcaption>
+          </figure>
+        </div>
+
+        <div class="rw-row rw-card">
+          <div class="rw-card__visual" data-reveal>
+            <div class="rv">
+              <div class="wcard" data-tilt-card role="img" aria-label="Example White Rewards card for a House member with 50 welcome beans">
+                <div class="wcard__tilt" data-tilt-inner>
+                  <div class="wcard__face">
+                    <span class="wcard__wm"></span>
+                    <span class="wcard__sheen" data-sheen></span>
+                    <span class="wcard__top">
+                      <img class="wcard__logo" src="assets/img/logo-mark.svg" alt="" width="48" height="48" loading="lazy" decoding="async">
+                      <span class="wcard__brand"><span class="wcard__word">White Coffee House</span><span class="wcard__prog">White Rewards</span></span>
+                    </span>
+                    <span class="wcard__bal"><span class="wcard__beans num" data-welcome>50</span><span class="wcard__unit">beans</span></span>
+                    <span class="wcard__foot"><span class="wcard__name">Your name</span><span class="wcard__tier">House member</span></span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="rw-card__copy" data-reveal>
+            <h3 class="h3"><span class="mask"><span class="mask__in">How it works</span></span></h3>
+            <ol class="steps" role="list">
+              <li class="step rv">
+                <span class="step__num" aria-hidden="true">1</span>
+                <div class="step__body"><h4 class="step__title">Join free</h4><p>Sign up with your phone number in the customer portal. We add <span data-welcome>50</span> welcome beans to your card.</p></div>
+              </li>
+              <li class="step rv">
+                <span class="step__num" aria-hidden="true">2</span>
+                <div class="step__body"><h4 class="step__title">Earn beans</h4><p>Show your card at the counter. You get <span data-earn-rule>1 bean for every MVR 5</span>, plus a stamp for every handcrafted drink.</p></div>
+              </li>
+              <li class="step rv">
+                <span class="step__num" aria-hidden="true">3</span>
+                <div class="step__body"><h4 class="step__title">Treat yourself</h4><p>Swap beans for drinks, pastries and brunch plates, from <span data-min-reward>100 beans</span>.</p></div>
+              </li>
+            </ol>
+          </div>
+        </div>
+
+        <div class="rw-row rw-stamps">
+          <div class="rw-stamps__copy" data-reveal>
+            <h3 class="h3"><span class="mask"><span class="mask__in">Every <span data-stamps-ordinal>10th</span> drink is on us</span></span></h3>
+            <p class="rw-text rv">Each handcrafted drink earns a stamp on your coffee card. Fill the card and your next drink is free.</p>
+          </div>
+          <div class="rw-stamps__visual" data-reveal>
+            <div class="rv">
+              <div class="ccard" data-stamps role="img" aria-label="Example coffee card: ten stamps, then a free drink">
+                <div class="ccard__head">
+                  <span class="ccard__title">Coffee card</span>
+                  <span class="ccard__count num"><span data-stamp-count>0</span> of <span data-stamp-total>10</span></span>
+                </div>
+                <ol class="ccard__slots" role="list" data-stamp-slots></ol>
+                <p class="ccard__line" data-stamp-line>Every handcrafted drink earns a stamp.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="rw-block">
+          <div class="rw-sub" data-reveal>
+            <h3 class="h3"><span class="mask"><span class="mask__in">Earn more as you go</span></span></h3>
+            <p class="rw-text rv">Your tier follows the beans you have earned in total, so the perks grow with every visit.</p>
+          </div>
+          <ol class="tiers" role="list" data-reveal data-tiers>
+            <!--TIERS-->
+          </ol>
+        </div>
+
+        <div class="rw-block">
+          <div class="rw-sub" data-reveal>
+            <h3 class="h3"><span class="mask"><span class="mask__in">Spend your beans</span></span></h3>
+            <p class="rw-text rv">Rewards you can claim in the customer portal and collect at the counter.</p>
+          </div>
+          <ul class="rlist" role="list" data-reveal data-rewards-list>
+            <!--REWARDS-->
+          </ul>
+        </div>
+
+        <div class="rw-close" data-reveal>
+          <div class="rw-close__card rv">
+            <p class="rw-close__text">Your card, beans and rewards live in the customer portal.</p>
+            <div class="btn-row">
+              <a class="btn btn--gold" href="portal/?join=1">Join free</a>
+              <a class="btn btn--ghost" href="portal/">Sign in</a>
+            </div>
+          </div>
+          <p class="rw-staff rv">Staff? <a href="admin/">Open the admin portal</a></p>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ============ The space ============ -->
+    <section class="space" id="space" aria-labelledby="space-title">
+      <div class="container space__grid">
+        <div class="space__arch" data-reveal>
+          <div class="arch rv">
+            <span class="ph ph--arch"><span class="ph__in" data-parallax><img src="assets/img/photos/space-storefront-800.webp" srcset="assets/img/photos/space-storefront-800.webp 800w, assets/img/photos/space-storefront-1600.webp 1600w" sizes="(min-width: 900px) 460px, 86vw" width="800" height="1000" alt="A small white café front with tall glass doors, potted trees and greenery" loading="lazy" decoding="async"></span></span>
+          </div>
+        </div>
+        <div class="space__copy" data-reveal>
+          <h2 class="h2" id="space-title"><span class="mask"><span class="mask__in">A little white house in <span class="gold">Hulhumalé.</span></span></span></h2>
+          <p class="lede rv">Warm lantern light, gold lettering over the door, and a table that is yours for as long as you like.</p>
+          <p class="space__text rv">Drop in for a quick coffee or settle in for the evening. We are open until midnight, every day.</p>
+        </div>
+        <div class="space__counter" data-reveal>
+          <div class="rv">
+            <span class="ph ph--counter"><span class="ph__in" data-parallax><img src="assets/img/photos/space-counter-800.webp" srcset="assets/img/photos/space-counter-800.webp 800w, assets/img/photos/space-counter-1600.webp 1600w" sizes="(min-width: 900px) 520px, 86vw" width="800" height="600" alt="A curved white café counter with a marble top and glass cake domes" loading="lazy" decoding="async"></span></span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ Visit ============ -->
+    <section class="visit" id="visit" aria-labelledby="visit-title">
+      <div class="container visit__grid">
+        <div class="visit__info" data-reveal>
+          <h2 class="h2" id="visit-title"><span class="mask"><span class="mask__in">Visit us</span></span></h2>
+          <p class="lede rv">Open every day from 4&nbsp;PM to midnight, in Hulhumalé.</p>
+          <p class="visit__status rv"><span class="status-pill" data-open-status><span class="status-pill__dot" aria-hidden="true"></span><span data-status-text>Open every day, 4 PM to midnight</span></span></p>
+
+          <div class="visit__blocks">
+            <div class="vblock rv">
+              <h3 class="vblock__title">
+                <svg class="ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0C18.5 15.4 12 21 12 21Z"/><circle cx="12" cy="10" r="2.25"/></svg>
+                Find us
+              </h3>
+              <p class="vblock__text" data-info="address">Hulhumalé, Maldives</p>
+              <a class="btn btn--ghost vblock__btn" href="https://www.google.com/maps/search/?api=1&amp;query=White+Coffee+House+Hulhumal%C3%A9" target="_blank" rel="noopener" data-info-href="mapsUrl">
+                Get directions
+                <svg class="ic ic--sm" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 16 16 8M9.5 8H16v6.5"/></svg>
+                <span class="visually-hidden">(opens in a new tab)</span>
+              </a>
+            </div>
+            <div class="vblock rv">
+              <h3 class="vblock__title">
+                <svg class="ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20 11.5a8 8 0 0 1-11.6 7.1L4 20l1.4-4.1A8 8 0 1 1 20 11.5Z"/></svg>
+                Say hello
+              </h3>
+              <ul class="socials" role="list">
+                <li>
+                  <a class="social" href="https://www.instagram.com/whitecoffeehousemv/" target="_blank" rel="noopener" data-info-href="instagram">
+                    <svg class="ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3.5" y="3.5" width="17" height="17" rx="5"/><circle cx="12" cy="12" r="4"/><path d="M17.25 6.75h.01" stroke-width="2.4"/></svg>
+                    <span><span class="social__name">Instagram</span><span class="social__handle" data-info="instagramHandle">@whitecoffeehousemv</span></span>
+                    <span class="visually-hidden">(opens in a new tab)</span>
+                  </a>
+                </li>
+                <li>
+                  <a class="social" href="https://www.tiktok.com/@whitecoffeehouse.mv" target="_blank" rel="noopener" data-info-href="tiktok">
+                    <svg class="ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M13.5 3.5v11.25a3.25 3.25 0 1 1-3.25-3.25"/><path d="M13.5 3.5c.45 2.75 2.3 4.4 5 4.6"/></svg>
+                    <span><span class="social__name">TikTok</span><span class="social__handle" data-info="tiktokHandle">@whitecoffeehouse.mv</span></span>
+                    <span class="visually-hidden">(opens in a new tab)</span>
+                  </a>
+                </li>
+              </ul>
+              <a class="link-arrow vblock__dm" href="https://ig.me/m/whitecoffeehousemv" target="_blank" rel="noopener">Message us on Instagram<svg class="ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6"/></svg><span class="visually-hidden"> (opens in a new tab)</span></a>
+            </div>
+          </div>
+        </div>
+
+        <div class="visit__hours" data-reveal>
+          <div class="hours rv">
+            <div class="hours__head">
+              <h3 class="hours__title">Opening hours</h3>
+              <span class="chip" data-hours-note>Soft opening hours</span>
+            </div>
+            <table class="hours__table">
+              <caption class="visually-hidden">Opening hours by day, Malé time</caption>
+              <tbody data-hours>
+                <!--HOURS-->
+              </tbody>
+            </table>
+            <p class="hours__foot">All times are Malé time.</p>
+          </div>
+        </div>
+      </div>
+    </section>
   </main>
 
+  <!-- ============ Footer ============ -->
+  <footer class="footer">
+    <div class="container footer__top">
+      <div class="footer__brand">
+        <a class="brand" href="#top" aria-label="White Coffee House, back to top">
+          <img class="brand__mark" src="assets/img/logo-mark.svg" alt="" width="40" height="40" loading="lazy" decoding="async">
+          <span class="brand__name">White Coffee House</span>
+        </a>
+        <p class="footer__tag">Good coffee. Great food. Better vibes.</p>
+        <p class="footer__where">Hulhumalé, Maldives · Every day, 4&nbsp;PM to midnight</p>
+      </div>
+      <nav class="footer__nav" aria-label="Footer">
+        <div class="fcol">
+          <h2 class="fcol__title">Explore</h2>
+          <ul role="list">
+            <li><a href="#menu">Menu</a></li>
+            <li><a href="#rewards">Rewards</a></li>
+            <li><a href="#space">The space</a></li>
+            <li><a href="#visit">Visit</a></li>
+          </ul>
+        </div>
+        <div class="fcol">
+          <h2 class="fcol__title">Portals</h2>
+          <ul role="list">
+            <li><a href="portal/">Customer portal</a></li>
+            <li><a href="admin/">Admin portal</a></li>
+          </ul>
+        </div>
+        <div class="fcol">
+          <h2 class="fcol__title">Follow</h2>
+          <ul role="list">
+            <li><a href="https://www.instagram.com/whitecoffeehousemv/" target="_blank" rel="noopener">Instagram<span class="visually-hidden"> (opens in a new tab)</span></a></li>
+            <li><a href="https://www.tiktok.com/@whitecoffeehouse.mv" target="_blank" rel="noopener">TikTok<span class="visually-hidden"> (opens in a new tab)</span></a></li>
+          </ul>
+        </div>
+      </nav>
+    </div>
+    <div class="container footer__mark" aria-hidden="true"><span class="footer__word">White Coffee House</span></div>
+    <div class="container">
+      <div class="footer__base">
+        <p>© 2026 White Coffee House</p>
+        <p><a href="#top">Back to top</a></p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- hero.js: cursor ring for the latte -->
   <div class="cursor-ring" aria-hidden="true" data-cursor></div>
 </body>
 </html>

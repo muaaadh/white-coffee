@@ -21,6 +21,7 @@
   var MONTHS_FULL = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
   var MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   var DAYS_IN_MONTH = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  var FULL_MS = 2600;   // how long a just-filled coffee card stays full on screen
   var AUTH_VIEWS = { signin: 1, join: 1 };
   var APP_VIEWS = { card: 1, rewards: 1, activity: 1, profile: 1, code: 1 };
 
@@ -77,8 +78,14 @@
     return n + (s[(v - 20) % 10] || s[v] || s[0]);
   }
   function digitsOf(s) { return String(s || '').replace(/\D/g, ''); }
+  /** Length of a +960 / 00960 country code at the start of more than 7 digits (0 if none). */
+  function ccLen(d) { return d.length > 7 ? (d.indexOf('00960') === 0 ? 5 : d.indexOf('960') === 0 ? 3 : 0) : 0; }
+  /** Whatever was typed or pasted ("+960 771 2408", "009607712408", "771-2408") -> the 7 local digits. */
+  function localDigits(v) { var d = digitsOf(v); return d.slice(ccLen(d)).slice(0, 7); }
   /** "7712408" -> "771 2408" (Maldives numbers are 7 digits). */
-  function prettyLocal(d) { d = digitsOf(d).slice(0, 7); return d.length > 3 ? d.slice(0, 3) + ' ' + d.slice(3) : d; }
+  function prettyLocal(v) { var d = localDigits(v); return d.length > 3 ? d.slice(0, 3) + ' ' + d.slice(3) : d; }
+  /** Field-error content: icon + one text run (the error row is a flex row, so text and links stay together). */
+  function errHTML(msg, extra) { return msg ? icon('alert') + '<span>' + esc(msg) + (extra || '') + '</span>' : ''; }
   function localPart(phone) { var d = digitsOf(phone); if (d.length > 7 && d.indexOf('960') === 0) d = d.slice(3); return d.slice(-7); }
   function fullPhone(local) { return '+960 ' + prettyLocal(local); }
   function mmss(ms) {
@@ -147,6 +154,9 @@
     flipped: false,
     shownBeans: null,
     shownStamps: null,
+    shownFree: null,
+    fullUntil: 0,
+    fullTimer: 0,
     signin: { step: 'phone', local: '', error: '', notFound: false, busy: false },
     joinPrefill: '',
     filter: 'all',
@@ -362,7 +372,14 @@
         '<span class="waiting__main"><span class="waiting__title">You have a reward waiting</span>' +
         '<span class="waiting__sub">' + esc(r.rewardName) + ' · <span class="nowrap"><span class="num" data-until="' + r.expires + '">' + mmss(r.expires - Date.now()) + '</span> left</span></span></span>' +
         icon('chevron', 'waiting__chev') + '</a>';
-    }).join('');
+    }).join('') +
+    // A free drink from the coffee card is used by showing the card, so the row turns the card to its QR code.
+    (m.freeDrinks > 0 ?
+      '<button class="waiting waiting--free" type="button" data-act="show-qr">' +
+        '<span class="waiting__ic">' + icon('cup') + '</span>' +
+        '<span class="waiting__main"><span class="waiting__title">' + (m.freeDrinks === 1 ? 'A free drink is ready' : F.num(m.freeDrinks) + ' free drinks are ready') + '</span>' +
+        '<span class="waiting__sub">Show your QR code at the counter to use it</span></span>' +
+        icon('qr', 'waiting__chev') + '</button>' : '');
     $('#side-next').innerHTML = nextRewardHTML(m);
     updateSideCard(m);
   }
@@ -410,7 +427,7 @@
                 'aria-label="Digit ' + (i + 1) + ' of 4" data-otp="' + i + '">';
             }).join('') +
           '</div>' +
-          '<p class="field-error" id="otp-err" role="alert">' + (st.error ? icon('alert') + esc(st.error) : '') + '</p>' +
+          '<p class="field-error" id="otp-err" role="alert">' + errHTML(st.error) + '</p>' +
           '<button class="btn btn--block" type="submit"' + (st.busy ? ' disabled' : '') + '>' + (st.busy ? '<span class="spinner" aria-hidden="true"></span>Checking…' : 'Verify and sign in') + '</button>' +
           '<p class="auth-row">Didn’t get it? <button class="link-btn" type="button" data-act="resend">Send a new code</button></p>' +
         '</form>';
@@ -423,9 +440,9 @@
             '<label for="si-phone">Phone number</label>' +
             '<div class="phone-input">' +
               '<span class="phone-input__cc" aria-hidden="true">+960</span>' +
-              '<input class="input num" id="si-phone" type="tel" inputmode="numeric" autocomplete="tel-national" placeholder="771 2408" maxlength="8" value="' + esc(prettyLocal(st.local)) + '" aria-describedby="si-phone-err">' +
+              '<input class="input num" id="si-phone" type="tel" inputmode="numeric" autocomplete="tel-national" placeholder="771 2408" maxlength="20" value="' + esc(prettyLocal(st.local)) + '" aria-describedby="si-phone-err">' +
             '</div>' +
-            '<p class="field-error" id="si-phone-err" role="alert">' + (st.error ? icon('alert') + esc(st.error) : '') + '</p>' +
+            '<p class="field-error" id="si-phone-err" role="alert">' + errHTML(st.error) + '</p>' +
             (st.notFound ? '<a class="btn btn--ghost btn--sm notfound-join" href="#join" data-act="join-with-number">Join free with this number</a>' : '') +
           '</div>' +
           '<button class="btn btn--block" type="submit">Send code</button>' +
@@ -485,7 +502,7 @@
               '<p class="field-error" id="j-name-err" role="alert"></p></div>' +
             '<div class="field"><label for="j-phone">Phone number</label>' +
               '<div class="phone-input"><span class="phone-input__cc" aria-hidden="true">+960</span>' +
-              '<input class="input num" id="j-phone" name="phone" type="tel" inputmode="numeric" autocomplete="tel-national" placeholder="771 2408" maxlength="8" value="' + esc(prettyLocal(S.joinPrefill)) + '" aria-describedby="j-phone-err j-phone-hint"></div>' +
+              '<input class="input num" id="j-phone" name="phone" type="tel" inputmode="numeric" autocomplete="tel-national" placeholder="771 2408" maxlength="20" value="' + esc(prettyLocal(S.joinPrefill)) + '" aria-describedby="j-phone-err j-phone-hint"></div>' +
               '<p class="hint" id="j-phone-hint">You’ll sign in with this number.</p>' +
               '<p class="field-error" id="j-phone-err" role="alert"></p></div>' +
             '<div class="field"><label for="j-email">Email <span class="optional">optional</span></label>' +
@@ -509,7 +526,22 @@
   /* ---------- Card (home) ---------- */
   VIEWS.card = function (m) {
     var p = W.program, tp = W.tierProgress(m), tier = tp.tier, next = tp.next;
-    var n = p.stampsForFree, stamps = Math.min(m.stamps, n);
+    var n = p.stampsForFree;
+    // The store wraps a full card straight back to 0 and adds a free drink. When that happens while this card
+    // is on screen (staff at the counter), show the full card for a moment, then the fresh one.
+    var live = $('#view').getAttribute('data-v') === 'card';
+    if (live && !reduced() && S.shownStamps != null && S.shownFree != null && m.freeDrinks > S.shownFree) {
+      S.fullUntil = Date.now() + FULL_MS;
+      clearTimeout(S.fullTimer);
+      S.fullTimer = setTimeout(function () {
+        S.fullUntil = 0;
+        S.shownStamps = 0;               // stamps carried over onto the new card land too
+        if (S.view === 'card') refresh();
+      }, FULL_MS);
+    }
+    S.shownFree = m.freeDrinks;
+    var showFull = S.fullUntil > Date.now();
+    var stamps = showFull ? n : Math.min(m.stamps, n);
     var cols = n <= 6 ? n : Math.ceil(n / 2);
     // Stamps added since the card was last drawn (e.g. by staff at the counter) land with a small press.
     var prevStamps = S.shownStamps;
@@ -523,7 +555,12 @@
         '<span class="visually-hidden">' + (filled ? 'Stamped' : last ? 'Free drink' : 'Empty') + '</span></li>';
     }
     var toGo = n - stamps;
-    var stampLine = stamps === 0 ? 'Every handcrafted drink earns a stamp.' :
+    var stampLine =
+      showFull ? 'Your card is full.' :
+      // "Stamps for a free drink" was lowered below what is already on this card: the store turns it
+      // into a free drink on the next visit.
+      m.stamps >= n ? 'Card full — your free drink is added at your next visit.' :
+      stamps === 0 ? (m.freeDrinks > 0 ? 'Card complete — new stamps start with your next drink.' : 'Every handcrafted drink earns a stamp.') :
       toGo === 1 ? 'One more drink and the next one is free.' :
       plural(toGo, 'more drink') + ' until a free one.';
 
@@ -606,7 +643,7 @@
           (can ?
             '<p class="reward__state is-ok">' + icon('checkCircle') + 'You can get this</p>' :
             '<div class="reward__progress"><div class="meter meter--sm" aria-hidden="true"><span class="meter__fill" style="--pct:' + pct.toFixed(1) + '%"></span></div>' +
-            '<p class="reward__state"><span><span class="num">' + F.num(short) + '</span> more beans to go</span></p></div>') +
+            '<p class="reward__state"><span><span class="num">' + F.num(short) + '</span> more ' + (short === 1 ? 'bean' : 'beans') + ' to go</span></p></div>') +
         '</div>' +
         (can ? '<button class="btn btn--sm reward__btn" type="button" data-act="redeem" data-id="' + esc(r.id) + '" aria-label="Redeem ' + esc(r.name) + ' for ' + F.num(r.cost) + ' beans">Redeem</button>' : '') +
       '</li>';
@@ -618,7 +655,13 @@
         '<p class="vhead__sub">You have <strong class="num" data-f="balance">' + F.num(m.beans) + ' beans</strong> to spend.</p>' +
       '</header>' +
       readyBlock +
-      (list.length ? '<ul class="rewards" role="list">' + items + '</ul>' : '<p class="empty">No rewards right now — check back soon.</p>') +
+      // With a code waiting, the catalogue gets its own heading so it never reads as part of "Ready to collect".
+      (list.length ?
+        (ready.length ?
+          '<section class="section" aria-labelledby="all-h"><div class="section-head"><h2 class="section-h" id="all-h">All rewards</h2></div>' +
+            '<ul class="rewards" role="list">' + items + '</ul></section>' :
+          '<ul class="rewards" role="list">' + items + '</ul>') :
+        '<p class="empty">No rewards right now — check back soon.</p>') +
       '<p class="hint rewards-hint">' + icon('clock') + 'Redeem when you’re at the café — your code stays valid for ' + plural(W.program.redemptionMinutes, 'minute') + '.</p>';
   };
 
@@ -694,10 +737,15 @@
   }
 
   /** Where a redeemed code stands now: ready (with time left), expired or cancelled. */
+  function readyRedemption(a) {
+    var r = a.type === 'redeem' && a.code ? W.redemption(a.code) : null;
+    return r && r.status === 'ready' && r.expires > Date.now() ? r : null;
+  }
   function redeemState(a) {
     var r = a.code ? W.redemption(a.code) : null;
     if (!r) return '';
-    if (r.status === 'ready' && r.expires > Date.now()) return '<a class="mini-chip mini-chip--link" href="#code/' + encodeURIComponent(r.code) + '">Ready — show code</a>';
+    // The whole row links to the code (see actRow), so the chip is a label, not a tiny tap target.
+    if (r.status === 'ready' && r.expires > Date.now()) return '<span class="mini-chip">Ready — show code</span>';
     if (r.status === 'ready' || r.status === 'expired') return '<span class="mini-chip mini-chip--muted">Code expired</span>';
     if (r.status === 'cancelled') return '<span class="mini-chip mini-chip--muted">Cancelled</span>';
     return '';
@@ -718,12 +766,30 @@
     if (a.beans) right = '<span class="act__beans num ' + (a.beans > 0 ? 'is-plus' : 'is-minus') + '">' + (a.beans > 0 ? '+' : '−') + F.num(Math.abs(a.beans)) + '<small>beans</small></span>';
     else if (a.type === 'free') right = '<span class="act__tag">Free</span>';
     else if (a.type === 'served') right = '<span class="act__tag">Served</span>';
+    var ready = readyRedemption(a);
+    var hit = ready ? '<a class="act__hit" href="#code/' + encodeURIComponent(ready.code) + '" aria-label="Show code ' + esc(ready.code) + ' for ' + esc(ready.rewardName) + '"></a>' : '';
     // Each meta item carries its own leading dot; .act__sub clips the dot that lands at the start of a line.
-    return '<li class="act">' +
+    return '<li class="act' + (ready ? ' act--link' : '') + '">' + hit +
       '<span class="act__ic tone-' + meta.tone + '">' + icon(meta.ic) + '</span>' +
       '<span class="act__main"><span class="act__title">' + esc(meta.title) + '</span>' +
       '<span class="act__sub"><span class="act__subin">' + sub.map(function (s) { return '<span class="si">' + s + '</span>'; }).join('') + '</span></span></span>' +
       right + '</li>';
+  }
+
+  /** What an empty filter means for this member, and where to go next. */
+  function emptyActivityHTML(m) {
+    if (S.filter === 'redeemed') {
+      var list = W.rewards(), first = list[0];
+      var line = 'No rewards yet.';
+      if (first) {
+        line += m.beans >= first.cost ?
+          ' You have ' + plural(m.beans, 'bean') + ' — enough to redeem one now.' :
+          ' You have ' + plural(m.beans, 'bean') + ' — ' + plural(first.cost - m.beans, 'more bean') + ' for your first reward, ' + first.name + '.';
+      }
+      return '<div class="empty"><p>' + esc(line) + '</p>' + (first ? '<a class="btn btn--ghost empty__btn" href="#rewards">See rewards</a>' : '') + '</div>';
+    }
+    if (S.filter === 'earned') return '<div class="empty"><p>Your visits will show up here after your first order.</p></div>';
+    return '<div class="empty"><p>Your visits, bonuses and rewards will show up here.</p></div>';
   }
 
   VIEWS.activity = function (m) {
@@ -733,7 +799,14 @@
     var month = all.filter(function (a) { var p = W.maleParts(a.ts); return p.y === now.y && p.mo === now.mo; });
     var visits = month.filter(function (a) { return a.type === 'earn'; }).length;
     var earned = month.reduce(function (s, a) { return s + (a.beans > 0 && a.type !== 'refund' ? a.beans : 0); }, 0);
-    var redeemed = month.filter(function (a) { return a.type === 'redeem'; }).length;
+    // Rewards the customer actually received: reward codes that were served, plus free coffee-card drinks.
+    // A cancelled, expired or still-waiting code is not a reward collected.
+    var collected = month.filter(function (a) {
+      if (a.type === 'free') return true;
+      if (a.type !== 'redeem') return false;
+      var r = a.code && W.redemption(a.code);
+      return !!r && r.status === 'served';
+    }).length;
 
     var shown = list.slice(0, S.activityLimit);
     var groups = [], cur = null;
@@ -755,12 +828,12 @@
       '<section class="summary" aria-labelledby="sum-h"><h2 class="summary__cap" id="sum-h">' + MONTHS_FULL[now.mo] + ' so far</h2><dl class="summary__grid">' +
         '<div><dt>Visits</dt><dd class="num">' + F.num(visits) + '</dd></div>' +
         '<div><dt>Beans earned</dt><dd class="num">+' + F.num(earned) + '</dd></div>' +
-        '<div><dt>Rewards</dt><dd class="num">' + F.num(redeemed) + '</dd></div>' +
+        '<div><dt>Rewards collected</dt><dd class="num">' + F.num(collected) + '</dd></div>' +
       '</dl></section>' +
       '<div class="seg" role="group" aria-label="Filter activity">' + seg + '</div>' +
       (groups.length ? groups.map(function (g) {
         return '<section class="month"><h2 class="month__h">' + esc(g.label) + '</h2><ul class="acts panel" role="list">' + g.rows.map(actRow).join('') + '</ul></section>';
-      }).join('') : '<p class="empty">Nothing here yet.</p>') +
+      }).join('') : emptyActivityHTML(m)) +
       (list.length > shown.length ? '<button class="btn btn--ghost btn--block more-btn" type="button" data-act="more">Show older activity</button>' : '');
   };
 
@@ -798,7 +871,7 @@
     if (m.favourite && !favFound) favOpts += '<option selected>' + esc(m.favourite) + '</option>';
 
     var tiersRows = p.tiers.map(function (t) {
-      return '<tr><th scope="row">' + esc(t.name) + '</th><td class="num">' + (t.min ? F.num(t.min) + '+' : 'From joining') + '</td><td class="num">' + esc(t.mult) + '×</td></tr>';
+      return '<tr><th scope="row">' + esc(t.name) + '</th><td class="num">' + (t.min ? F.num(t.min) + '+' : 'From joining') + '</td><td class="num">' + esc(t.mult) + '× beans</td></tr>';
     }).join('');
 
     return '' +
@@ -831,7 +904,7 @@
           '<li>' + icon('gift') + '<span><strong>Spend beans on rewards.</strong> You get a code that stays valid for ' + plural(p.redemptionMinutes, 'minute') + ' — show it at the counter.</span></li>' +
         '</ul>' +
         '<h3 class="perks-h how__tiers-h">Tiers</h3>' +
-        '<div class="table-wrap"><table class="tiers-table"><thead><tr><th scope="col">Tier</th><th scope="col">Beans earned</th><th scope="col">Beans per bill</th></tr></thead><tbody>' + tiersRows + '</tbody></table></div>' +
+        '<div class="table-wrap"><table class="tiers-table"><thead><tr><th scope="col">Tier</th><th scope="col">Beans earned</th><th scope="col">Earn rate</th></tr></thead><tbody>' + tiersRows + '</tbody></table></div>' +
         '<p class="hint">Your tier is based on all the beans you’ve earned since joining, so spending beans never lowers it.</p>' +
       '</section>' +
 
@@ -858,6 +931,12 @@
     if (location.hash === hash) route();
     else location.hash = hash;
   }
+  /** Navigate without adding a history entry (sign-in and join share one entry, which the card then takes over). */
+  function replaceHash(hash) {
+    if (location.hash === hash) { route(); return; }
+    try { history.replaceState(null, '', hash); } catch (e) { location.replace(hash); return; }   // file:// fallback fires hashchange
+    route();
+  }
 
   function syncMember(m) {
     var id = m ? m.id : null;
@@ -866,6 +945,9 @@
     S.flipped = false;
     S.shownBeans = null;
     S.shownStamps = null;
+    S.shownFree = null;
+    S.fullUntil = 0;
+    clearTimeout(S.fullTimer);
     S.seen = {};
     S.codeStatus = {};
     S.filter = 'all';
@@ -887,6 +969,7 @@
     else if (!v || v === 'signin' || (!APP_VIEWS[v] && v !== 'join')) v = 'card';
     if (v !== h.view) { try { history.replaceState(null, '', '#' + v); } catch (e) { /* file:// */ } }
     var entering = v !== S.view || arg !== S.arg || memberChanged;
+    if (AUTH_VIEWS[v] && AUTH_VIEWS[S.view] && v !== S.view) clearToasts();   // "Code sent…" belongs to sign-in, not Join
     if (v !== 'signin' && S.view === 'signin') { S.signin = { step: 'phone', local: S.signin.local, error: '', notFound: false, busy: false }; }
     S.view = v; S.arg = arg;
     if (v !== 'profile') S.profileDirty = false;
@@ -935,8 +1018,8 @@
     afterRender(v);
   }
 
-  function focusHeading() {
-    if (!S.booted) return;  // keep the first paint calm; focus moves on navigation
+  function focusHeading(force) {
+    if (!S.booted && !force) return;  // keep the first paint calm; focus moves on navigation
     var h = $('#view [data-focus]') || $('#side [data-focus]');
     if (h) { try { h.focus({ preventScroll: true }); } catch (e) { h.focus(); } }
   }
@@ -982,6 +1065,15 @@
         setFlip(!S.flipped);
         break;
       }
+      case 'show-qr': {
+        setFlip(true);
+        var qc = $('#side-card');
+        if (qc) {
+          var rect = qc.getBoundingClientRect();
+          if (rect.bottom > window.innerHeight - 80 || rect.top < 60) qc.scrollIntoView({ block: 'center', behavior: reduced() ? 'auto' : 'smooth' });
+        }
+        break;
+      }
       case 'demo':
         W.signInMember(W.demoMemberId());
         afterSignIn('Signed in as ' + W.currentMember().name, 'Demo account — explore freely.');
@@ -993,6 +1085,7 @@
         break;
       }
       case 'change-number':
+        clearToasts();   // the "Code sent to…" toast is about the number being changed
         S.signin.step = 'phone'; S.signin.error = ''; render(false, false);
         var pi = $('#si-phone'); if (pi) pi.focus();
         break;
@@ -1032,6 +1125,19 @@
     }
   });
 
+  /* Sign in and Join are two sides of one step: moving between them replaces the history entry
+     instead of stacking one per switch. After sign-in that single entry becomes #card (afterSignIn),
+     so Back from the card leaves the portal rather than landing on a form for a signed-in visitor. */
+  document.addEventListener('click', function (e) {
+    if (e.defaultPrevented || e.button || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    var a = e.target.closest && e.target.closest('a[href^="#"]');
+    if (!a || !AUTH_VIEWS[S.view]) return;
+    var href = a.getAttribute('href'), target = href.replace(/^#\/?/, '').split('/')[0].toLowerCase();
+    if (!AUTH_VIEWS[target]) return;
+    e.preventDefault();
+    replaceHash(href);
+  });
+
   document.addEventListener('submit', function (e) {
     var form = e.target.closest('form[data-form]');
     if (!form) return;
@@ -1049,7 +1155,8 @@
       var before = t.value, pos = t.selectionStart;
       var pretty = prettyLocal(t.value);
       if (pretty !== before) {
-        var digitsBefore = digitsOf(before.slice(0, pos)).length;
+        // Keep the caret after the same digit; a stripped +960 / 00960 prefix no longer counts.
+        var digitsBefore = Math.max(0, digitsOf(before.slice(0, pos)).length - ccLen(digitsOf(before)));
         t.value = pretty;
         var p = 0, seen = 0;
         while (p < pretty.length && seen < digitsBefore) { if (/\d/.test(pretty[p])) seen++; p++; }
@@ -1072,7 +1179,9 @@
     clearToasts();   // "Code sent…" belongs to the sign-in screen, not the card
     S.signin = { step: 'phone', local: '', error: '', notFound: false, busy: false };
     syncMember(m);
-    go('#card');
+    // Replace the sign-in / join entry, so Back from the card leaves the portal instead of
+    // reopening a sign-in or join form for someone who is already signed in.
+    replaceHash('#card');
     if (msg) toast(msg, { icon: 'card', sub: sub });
   }
 
@@ -1084,8 +1193,8 @@
   }
 
   function submitPhone(form) {
-    var local = digitsOf($('#si-phone', form).value);
-    if (local.length > 7 && local.indexOf('960') === 0) local = local.slice(3);
+    var raw = digitsOf($('#si-phone', form).value);
+    var local = raw.slice(ccLen(raw));   // the input handler already normalised it; this covers autofill without an input event
     S.signin.local = local;
     S.signin.notFound = false;
     if (local.length !== 7) {
@@ -1149,7 +1258,7 @@
     var code = otpBoxes().map(function (b) { return b.value; }).join('');
     if (code.length !== 4) {
       S.signin.error = 'Enter all 4 digits of the code.';
-      var er = $('#otp-err'); if (er) er.innerHTML = icon('alert') + esc(S.signin.error);
+      var er = $('#otp-err'); if (er) er.innerHTML = errHTML(S.signin.error);
       var empty = otpBoxes().filter(function (b) { return !b.value; })[0]; if (empty) empty.focus();
       return;
     }
@@ -1168,9 +1277,9 @@
   }
 
   /* ---------- Join ---------- */
-  function setFieldError(id, msg) {
+  function setFieldError(id, msg, extraHTML) {
     var el = $('#' + id + '-err'), inp = $('#' + id);
-    if (el) el.innerHTML = msg ? icon('alert') + esc(msg) : '';
+    if (el) el.innerHTML = errHTML(msg, extraHTML);
     if (inp) { if (msg) inp.setAttribute('aria-invalid', 'true'); else inp.removeAttribute('aria-invalid'); }
   }
 
@@ -1185,7 +1294,8 @@
 
   function submitJoin(form) {
     var name = $('#j-name').value.trim();
-    var local = digitsOf($('#j-phone').value);
+    var rawPhone = digitsOf($('#j-phone').value);
+    var local = rawPhone.slice(ccLen(rawPhone));
     var email = $('#j-email').value.trim();
     var bd = readBirthday('j');
     var bad = null;
@@ -1203,9 +1313,10 @@
       afterSignIn(null);
     } catch (err) {
       if (/phone/i.test(err.message)) {
-        setFieldError('j-phone', err.message + '.');
-        var el = $('#j-phone-err');
-        if (el && /already/i.test(err.message)) { el.innerHTML += ' <a class="link" href="#signin" data-act="signin-with-number">Sign in instead</a>'; S.signin.local = local; }
+        if (/already/i.test(err.message)) {
+          setFieldError('j-phone', 'This number already has a White Rewards card.', ' <a class="link" href="#signin">Sign in instead</a>');
+          S.signin = { step: 'phone', local: local, error: '', notFound: false, busy: false };
+        } else setFieldError('j-phone', err.message + '.');
         $('#j-phone').focus();
       } else { setFieldError('j-name', err.message); $('#j-name').focus(); }
     }
@@ -1246,20 +1357,19 @@
         '<button class="sheet__x" type="button" data-sheet-close aria-label="Close">' + icon('x') + '</button>' +
         '<h2 class="sheet__title" id="' + id + '-t">' + opts.title + '</h2>' +
         (opts.desc ? '<div class="sheet__desc" id="' + id + '-d">' + opts.desc + '</div>' : '') +
-        (opts.body || '') +
+        '<div class="sheet__body">' + (opts.body || '') + '</div>' +
         '<p class="field-error sheet__err" role="alert"></p>' +
-        '<div class="sheet__actions">' + (opts.actions || []).map(function (a, i) {
-          return '<button class="btn ' + (a.cls || '') + '" type="button" data-sheet-btn="' + i + '">' + a.label + '</button>';
-        }).join('') + '</div>' +
+        '<div class="sheet__actions">' + sheetActionsHTML(opts.actions) + '</div>' +
       '</div>';
     var sheet = $('.sheet', layer);
     var opener = opts.opener || document.activeElement;
-    openSheetState = { opener: opener, openerKey: focusKey(opener), opts: opts, sheet: sheet };
+    openSheetState = { opener: opener, openerKey: focusKey(opener), opts: opts, sheet: sheet, sig: sheetSig(opts) };
     ['#topbar', '#main', '#tabbar'].forEach(function (s) { var el = $(s); if (el) el.setAttribute('inert', ''); });
     document.body.classList.add('has-sheet');
     requestAnimationFrame(function () { layer.classList.add('is-open'); });
-    var focusBtn = $('[data-sheet-btn="0"]', sheet) || sheet;
-    setTimeout(function () { focusBtn.focus(); }, 30);
+    // Destructive confirms pass focus: 1 so Enter lands on the safe choice ("Keep it", "Keep my data").
+    var focusBtn = $('[data-sheet-btn="' + (opts.focus || 0) + '"]', sheet) || $('[data-sheet-btn="0"]', sheet) || sheet;
+    setTimeout(function () { if (openSheetState && openSheetState.sheet === sheet) focusBtn.focus(); }, 30);
     layer.onclick = function (e) {
       if (e.target.closest('[data-sheet-close]')) { closeSheet(); return; }
       var b = e.target.closest('[data-sheet-btn]');
@@ -1267,10 +1377,43 @@
         var a = opts.actions[+b.getAttribute('data-sheet-btn')];
         if (a && a.run) {
           try { var keep = a.run(); if (keep !== true) closeSheet(); }
-          catch (err) { var er = $('.sheet__err', sheet); er.innerHTML = icon('alert') + esc(err.message); }
+          catch (err) { var er = $('.sheet__err', sheet); er.innerHTML = errHTML(err.message); }
         } else closeSheet();
       }
     };
+  }
+
+  function sheetActionsHTML(actions) {
+    return (actions || []).map(function (a, i) {
+      return '<button class="btn ' + (a.cls || '') + '" type="button" data-sheet-btn="' + i + '">' + a.label + '</button>';
+    }).join('');
+  }
+  function sheetSig(o) { return [o.title, o.body || '', (o.actions || []).map(function (a) { return a.label; }).join('|')].join('\u0001'); }
+
+  /** Redraw the open sheet in place (title, body, buttons) when live data changed what it should say. */
+  function updateSheet(parts) {
+    var st = openSheetState;
+    if (!st || !parts) return;
+    var sig = sheetSig(parts);
+    if (sig === st.sig) return;
+    st.sig = sig;
+    var sheet = st.sheet, opts = st.opts;
+    var actionsEl = $('.sheet__actions', sheet);
+    var focusInActions = actionsEl.contains(document.activeElement);
+    var labelsChanged = (opts.actions || []).map(function (a) { return a.label; }).join('|') !== (parts.actions || []).map(function (a) { return a.label; }).join('|');
+    opts.title = parts.title; opts.body = parts.body; opts.actions = parts.actions;   // the click handler reads opts.actions
+    $('.sheet__title', sheet).innerHTML = parts.title;
+    $('.sheet__body', sheet).innerHTML = parts.body || '';
+    $('.sheet__err', sheet).innerHTML = '';
+    if (labelsChanged) {
+      actionsEl.innerHTML = sheetActionsHTML(parts.actions);
+      if (focusInActions || !sheet.contains(document.activeElement)) { var b0 = $('[data-sheet-btn="0"]', sheet); if (b0) b0.focus(); }
+    }
+  }
+
+  /** Let an open sheet react to a data change (another tab, staff at the counter, a code timing out). */
+  function syncSheet() {
+    if (openSheetState && openSheetState.opts.onData) openSheetState.opts.onData();
   }
 
   function closeSheet(silent) {
@@ -1284,9 +1427,11 @@
     var done = function () { if (!openSheetState) layer.innerHTML = ''; };
     if (silent || reduced()) done(); else setTimeout(done, 260);
     if (!silent) {
-      // The view may have re-rendered underneath (live sync), so fall back to the opener's replacement.
+      // The view may have re-rendered underneath (live sync), so fall back to the opener's replacement,
+      // and to the view heading when the opener is gone (e.g. the code was served while the sheet was open).
       if (st.opener && document.contains(st.opener)) { try { st.opener.focus(); } catch (e) { /* noop */ } }
       else restoreFocus(st.openerKey);
+      if (!document.activeElement || document.activeElement === document.body || st.sheet.contains(document.activeElement)) focusHeading(true);
     }
     if (st.opts.onClose) st.opts.onClose();
   }
@@ -1304,34 +1449,59 @@
     }
   });
 
-  function confirmRedeem(m, rewardId, opener) {
-    var r = W.reward(rewardId); if (!r) return;
-    var after = m.beans - r.cost;
-    openSheet({
-      opener: opener,
-      title: 'Redeem ' + esc(r.name) + '?',
-      body: '<div class="sheet-reward"><span class="reward__ic">' + icon(rewardIcon(r)) + '</span>' +
+  /** The redeem sheet's content for the member's balance right now (rebuilt when the balance changes live). */
+  function redeemSheetParts(rewardId) {
+    var m = W.currentMember(), r = W.reward(rewardId);
+    if (!m) return null;
+    if (!r || !r.active) {
+      return {
+        title: 'This reward isn’t available right now',
+        body: '<p class="sheet-note sheet-note--warn" role="alert">' + icon('info') + '<span>The café just paused or changed it. Your beans haven’t been touched.</span></p>',
+        actions: [{ label: 'OK', cls: 'btn--ghost' }]
+      };
+    }
+    var can = m.beans >= r.cost;
+    var body = '<div class="sheet-reward"><span class="reward__ic">' + icon(rewardIcon(r)) + '</span>' +
         '<div><p class="sheet-reward__name">' + esc(r.name) + '</p><p class="sheet-reward__cost num">' + F.num(r.cost) + ' beans</p></div></div>' +
-        '<dl class="sheet-sum"><div><dt>Your balance now</dt><dd class="num">' + F.num(m.beans) + ' beans</dd></div>' +
-        '<div><dt>After redeeming</dt><dd class="num">' + F.num(after) + ' beans</dd></div></dl>' +
-        '<p class="sheet-note">' + icon('clock') + '<span>You’ll get a code to show at the counter. It stays valid for ' + plural(W.program.redemptionMinutes, 'minute') + ', so redeem when you’re at the café.</span></p>',
-      actions: [
+      '<dl class="sheet-sum"><div><dt>Your balance now</dt><dd class="num">' + F.num(m.beans) + ' beans</dd></div>' +
+        (can ? '<div><dt>After redeeming</dt><dd class="num">' + F.num(m.beans - r.cost) + ' beans</dd></div>' :
+               '<div><dt>Still needed</dt><dd class="num">' + plural(r.cost - m.beans, 'bean') + '</dd></div>') + '</dl>' +
+      (can ?
+        '<p class="sheet-note">' + icon('clock') + '<span>You’ll get a code to show at the counter. It stays valid for ' + plural(W.program.redemptionMinutes, 'minute') + ', so redeem when you’re at the café.</span></p>' :
+        '<p class="sheet-note sheet-note--warn" role="alert">' + icon('info') + '<span>Your balance just changed. You now have ' + plural(m.beans, 'bean') + ' — ' + plural(r.cost - m.beans, 'more bean') + ' needed for this reward.</span></p>');
+    return {
+      title: (can ? 'Redeem ' : 'Not enough beans for ') + esc(r.name) + (can ? '?' : ' yet'),
+      body: body,
+      actions: can ? [
         { label: 'Redeem for ' + F.num(r.cost) + ' beans', cls: 'btn--gold', run: function () {
-          var red = W.redeem(m.id, r.id);
+          var red = W.redeem(W.currentMember().id, rewardId);
           S.codeStatus[red.code] = 'ready';
           setTimeout(function () { go('#code/' + encodeURIComponent(red.code)); }, 0);
         } },
         { label: 'Not now', cls: 'btn--ghost' }
-      ]
-    });
+      ] : [{ label: 'OK', cls: 'btn--ghost' }]
+    };
+  }
+
+  function confirmRedeem(m, rewardId, opener) {
+    var parts = redeemSheetParts(rewardId); if (!parts || !W.reward(rewardId)) return;
+    parts.opener = opener;
+    parts.onData = function () { updateSheet(redeemSheetParts(rewardId)); };
+    openSheet(parts);
   }
 
   function confirmCancel(code, opener) {
     var r = W.redemption(code); if (!r) return;
     openSheet({
       opener: opener,
+      focus: 1,
       title: 'Cancel this reward?',
       desc: '<p>' + esc(r.rewardName) + ' (' + esc(r.code) + ') will be cancelled and <strong>' + F.num(r.cost) + ' beans</strong> go back on your card.</p>',
+      // Served, expired or cancelled elsewhere while this was open: the screen behind already says what happened.
+      onData: function () {
+        var now = W.redemption(code);
+        if (!now || now.status !== 'ready' || now.expires <= Date.now()) closeSheet();
+      },
       actions: [
         { label: 'Cancel reward', cls: 'btn--danger-solid', run: function () {
           W.cancelRedemption(r.code);
@@ -1346,6 +1516,7 @@
   function confirmReset(opener) {
     openSheet({
       opener: opener,
+      focus: 1,
       title: 'Reset demo data?',
       desc: '<p>Every member, visit, reward and setting goes back to the starting demo — here, in the admin portal and on the website. You’ll be signed out.</p>',
       actions: [
@@ -1448,6 +1619,8 @@
     if (!m) return;
     if (info.remote) notifyRemote(m); else markSeen(m);
     refresh();
+    // Local changes come from the sheet's own button (it closes right after); remote ones can make it stale.
+    if (info.remote) syncSheet();
   });
 
   /* Countdown ticker for ready codes */
@@ -1462,7 +1635,7 @@
       var left = +el.getAttribute('data-until-bar') - now, total = +el.getAttribute('data-total') || 1;
       el.style.setProperty('--pct', Math.max(0, Math.min(100, left / total * 100)).toFixed(2) + '%');
     });
-    if (expired) { W.redemptions(); refresh(); }
+    if (expired) { W.redemptions(); refresh(); syncSheet(); }
   }, 1000);
 
   /* Keep the greeting / open status fresh */
