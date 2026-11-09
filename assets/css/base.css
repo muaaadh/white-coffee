@@ -1,0 +1,158 @@
+/* ==========================================================================
+   White Coffee House — shared foundation (tokens, type, reset, controls).
+   Owned by the site shell. Page-specific styles live in site.css /
+   portal.css / admin.css and must build on these tokens, not redefine them.
+   ========================================================================== */
+
+@import url("https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600&family=Kalnia:wght@300;400;500&family=Manrope:wght@400;500;600;700&display=swap");
+
+:root {
+  /* Surfaces — warm whites, never pure grey */
+  --paper: #FBF8F2;        /* page background */
+  --white: #FFFFFF;        /* cards, porcelain */
+  --cream: #F4EEE3;        /* alt section background */
+  --sand: #E9E0D0;         /* hairlines on cream, inactive fills */
+  --latte: #D9C7A7;        /* soft milk-coffee tone */
+
+  /* Brand gold — from the logo + posters */
+  --gold-100: #F3EAD8;
+  --gold-200: #E4D3AE;
+  --gold-300: #CDB283;
+  --gold: #A8884F;         /* brand gold: logo, large display type, icons */
+  --gold-ink: #7A5E30;     /* gold that passes 4.5:1 on paper — use for small gold text */
+  --gold-grad: linear-gradient(135deg, #C8AD74 0%, #A8884F 45%, #8A6C3A 100%);
+
+  /* Coffee + ink */
+  --espresso: #2B211A;     /* primary text */
+  --roast: #4A3A2E;        /* secondary dark */
+  --muted: #6F6357;        /* secondary text (4.9:1 on paper) */
+  --faint: #9A8F82;        /* tertiary text, large only */
+  --line: rgba(43, 33, 26, 0.10);
+  --line-strong: rgba(43, 33, 26, 0.18);
+
+  /* Status */
+  --ok: #3F7A4F;
+  --warn: #B07A1E;
+  --bad: #A7432F;
+
+  /* Type */
+  --font-display: "Kalnia", "Times New Roman", serif;   /* headings — matches the "Opening Soon" poster */
+  --font-mark: "Cinzel", "Trajan Pro", serif;           /* wordmark caps only */
+  --font-body: "Manrope", system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  --fs-xs: 0.8125rem;   /* 13 */
+  --fs-sm: 0.875rem;    /* 14 */
+  --fs-base: 1rem;      /* 16 */
+  --fs-md: 1.125rem;    /* 18 */
+  --fs-lg: 1.375rem;    /* 22 */
+  --fs-xl: clamp(1.75rem, 1.2rem + 2.2vw, 2.75rem);
+  --fs-2xl: clamp(2.25rem, 1.3rem + 3.8vw, 4.25rem);
+  --fs-hero: clamp(2.75rem, 1.2rem + 6.4vw, 6.5rem);
+
+  /* Space + shape */
+  --gutter: clamp(1rem, 0.4rem + 2.6vw, 2.5rem);
+  --section: clamp(4.5rem, 3rem + 7vw, 9rem);
+  --max: 1240px;
+  --measure: 38rem;
+  --r-sm: 8px;
+  --r-md: 14px;
+  --r-lg: 22px;
+  --r-pill: 999px;
+  --shadow-sm: 0 1px 2px rgba(43, 33, 26, 0.06), 0 2px 8px rgba(43, 33, 26, 0.04);
+  --shadow-md: 0 2px 6px rgba(43, 33, 26, 0.05), 0 12px 32px rgba(43, 33, 26, 0.08);
+  --shadow-lg: 0 4px 12px rgba(43, 33, 26, 0.06), 0 30px 60px rgba(43, 33, 26, 0.12);
+
+  /* Motion */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur: 0.7s;
+
+  --header-h: 72px;
+  color-scheme: light;
+}
+
+/* ---------- Reset ---------- */
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; scroll-padding-top: calc(var(--header-h) + 16px); }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--espresso);
+  font-family: var(--font-body);
+  font-size: var(--fs-base);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+img, svg, video, canvas { display: block; max-width: 100%; }
+img { height: auto; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+a { color: inherit; }
+h1, h2, h3, h4 { margin: 0; font-weight: 400; line-height: 1.08; }
+p { margin: 0; }
+ul[role="list"], ol[role="list"] { list-style: none; margin: 0; padding: 0; }
+:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; border-radius: 4px; }
+::selection { background: var(--gold-200); color: var(--espresso); }
+
+/* ---------- Type helpers ---------- */
+.display { font-family: var(--font-display); font-weight: 400; letter-spacing: -0.01em; color: var(--gold); }
+.wordmark { font-family: var(--font-mark); font-weight: 600; letter-spacing: 0.06em; color: var(--gold); text-transform: uppercase; }
+.lede { font-size: var(--fs-md); color: var(--muted); max-width: var(--measure); }
+.label { font-size: var(--fs-sm); font-weight: 600; color: var(--gold-ink); }  /* sentence case, never tracked caps */
+.muted { color: var(--muted); }
+.num { font-variant-numeric: tabular-nums; }
+.visually-hidden { position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+/* ---------- Layout ---------- */
+.container { width: 100%; max-width: var(--max); margin-inline: auto; padding-inline: var(--gutter); }
+
+/* ---------- Buttons ---------- */
+.btn {
+  --btn-bg: var(--espresso); --btn-fg: var(--paper); --btn-bd: var(--espresso);
+  display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+  min-height: 44px; padding: 0.7rem 1.35rem;
+  border: 1px solid var(--btn-bd); border-radius: var(--r-pill);
+  background: var(--btn-bg); color: var(--btn-fg);
+  font-size: var(--fs-sm); font-weight: 600; line-height: 1; text-decoration: none; white-space: nowrap;
+  transition: background-color .25s var(--ease-out), color .25s var(--ease-out), border-color .25s var(--ease-out), transform .25s var(--ease-out), box-shadow .25s var(--ease-out);
+}
+.btn:hover { --btn-bg: var(--roast); --btn-bd: var(--roast); }
+.btn:active { transform: translateY(1px); }
+.btn--gold { --btn-bg: var(--gold); --btn-bd: var(--gold); --btn-fg: #fff; }
+.btn--gold:hover { --btn-bg: var(--gold-ink); --btn-bd: var(--gold-ink); }
+.btn--ghost { --btn-bg: transparent; --btn-fg: var(--espresso); --btn-bd: var(--line-strong); }
+.btn--ghost:hover { --btn-bg: var(--white); --btn-bd: var(--gold-300); --btn-fg: var(--espresso); }
+.btn--sm { min-height: 36px; padding: 0.5rem 0.95rem; font-size: var(--fs-xs); }
+.btn[disabled], .btn[aria-disabled="true"] { opacity: .45; pointer-events: none; }
+
+/* ---------- Form controls ---------- */
+.field { display: grid; gap: 0.4rem; }
+.field > label { font-size: var(--fs-sm); font-weight: 600; color: var(--roast); }
+.input, .select, .textarea {
+  width: 100%; min-height: 46px; padding: 0.7rem 0.9rem;
+  border: 1px solid var(--line-strong); border-radius: var(--r-sm);
+  background: var(--white); color: var(--espresso); font-size: 1rem;  /* 16px stops iOS zoom */
+  transition: border-color .2s, box-shadow .2s;
+}
+.input:focus, .select:focus, .textarea:focus { outline: none; border-color: var(--gold); box-shadow: 0 0 0 3px var(--gold-100); }
+.hint { font-size: var(--fs-xs); color: var(--muted); }
+
+/* ---------- Surfaces ---------- */
+.card { background: var(--white); border: 1px solid var(--line); border-radius: var(--r-md); box-shadow: var(--shadow-sm); }
+.chip { display: inline-flex; align-items: center; gap: .35rem; padding: .25rem .65rem; border-radius: var(--r-pill); background: var(--gold-100); color: var(--gold-ink); font-size: var(--fs-xs); font-weight: 600; }
+.hr { height: 1px; background: var(--line); border: 0; margin: 0; }
+
+/* ---------- Brand lockup (header/footer) ---------- */
+.brand { display: inline-flex; align-items: center; gap: 0.7rem; text-decoration: none; color: var(--gold); }
+.brand__mark { width: 40px; height: 40px; flex: none; }
+.brand__name { font-family: var(--font-mark); font-weight: 600; text-transform: uppercase; letter-spacing: .05em; line-height: 1.1; font-size: 0.9rem; white-space: nowrap; }
+.brand__name small { font-size: inherit; letter-spacing: inherit; }   /* one readable line: WHITE COFFEE HOUSE */
+
+/* ---------- Demo banner (mockup notice) ---------- */
+.demo-note { font-size: var(--fs-xs); color: var(--muted); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+}

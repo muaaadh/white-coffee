@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>White Coffee House — hero prototype A, a latte you can stir</title>
+  <meta name="description" content="White Coffee House, a cozy new café in Hulhumalé, Maldives. Good coffee. Great food. Better vibes. Open every day from 4 PM to midnight.">
+  <meta name="theme-color" content="#FBF8F2">
+  <link rel="icon" href="assets/icons/favicon-32.png" sizes="32x32" type="image/png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/hero.css">
+  <script>document.documentElement.classList.add('js');</script>
+  <script src="assets/js/hero.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <!-- ============ Header (prototype of the final site header) ============ -->
+  <header class="site-header" data-header>
+    <div class="site-header__inner container">
+      <a class="brand" href="./" aria-label="White Coffee House, home">
+        <img class="brand__mark" src="assets/img/logo-mark.svg" alt="" width="40" height="40">
+        <span class="brand__name"><small>White</small>Coffee House</span>
+      </a>
+
+      <nav class="site-nav" id="site-nav" aria-label="Main">
+        <ul class="site-nav__list" role="list">
+          <li><a class="site-nav__link" href="#menu">Menu</a></li>
+          <li><a class="site-nav__link" href="#rewards">Rewards</a></li>
+          <li><a class="site-nav__link" href="#visit">Visit</a></li>
+        </ul>
+        <p class="site-nav__meta">Open every day, 4 PM to midnight · Hulhumalé</p>
+      </nav>
+
+      <div class="site-header__actions">
+        <a class="btn btn--ghost btn--sm portal-btn" href="portal/">
+          <svg class="portal-btn__icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><circle cx="8" cy="5.4" r="2.6"/><path d="M2.8 13.6c.7-2.5 2.8-3.9 5.2-3.9s4.5 1.4 5.2 3.9"/></svg>
+          <span>Customer<span class="portal-btn__word"> portal</span></span>
+        </a>
+        <a class="btn btn--sm portal-btn portal-btn--dark" href="admin/">
+          <svg class="portal-btn__icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><rect x="2.5" y="2.5" width="4.6" height="4.6" rx="1.2"/><rect x="8.9" y="2.5" width="4.6" height="4.6" rx="1.2"/><rect x="2.5" y="8.9" width="4.6" height="4.6" rx="1.2"/><rect x="8.9" y="8.9" width="4.6" height="4.6" rx="1.2"/></svg>
+          <span>Admin<span class="portal-btn__word"> portal</span></span>
+        </a>
+        <button class="menu-btn" type="button" aria-expanded="false" aria-controls="site-nav" aria-label="Open menu" data-menu-btn>
+          <span class="menu-btn__bar"></span><span class="menu-btn__bar"></span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main id="main">
+    <!-- ============ Hero ============ -->
+    <section class="hero" aria-labelledby="hero-title" data-hero>
+      <div class="hero__inner container">
+        <div class="hero__copy">
+          <p class="hero__wordmark wordmark" aria-hidden="true">White Coffee House</p>
+          <h1 class="hero__title" id="hero-title">
+            <span class="hero__line"><span>Good coffee.</span></span>
+            <span class="hero__line"><span>Great food.</span></span>
+            <span class="hero__line hero__line--gold"><span>Better vibes.</span></span>
+          </h1>
+          <p class="hero__lede">A cozy new café in Hulhumalé, open every day from 4&nbsp;PM to midnight.</p>
+          <div class="hero__ctas">
+            <a class="btn hero__cta" href="#menu">See the menu</a>
+            <a class="btn btn--ghost hero__cta" href="#rewards">
+              <svg class="hero__cta-icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><ellipse cx="8" cy="8" rx="4.4" ry="6" transform="rotate(35 8 8)"/><path d="M5.6 12.6c2.2-1.4 2.6-3.5 2.4-4.6s-.3-3 2.3-4.6"/></svg>
+              Join White Rewards
+            </a>
+          </div>
+        </div>
+
+        <div class="hero__visual">
+          <div class="cup-scroll" data-cup-scroll>
+            <div class="cup-enter">
+              <div class="cup-stage" data-stage>
+                <!-- shadow of the saucer on the table -->
+                <div class="cup-layer cup-layer--table" data-layer="table" aria-hidden="true">
+                  <svg viewBox="-120 -120 240 240" focusable="false">
+                    <defs>
+                      <filter id="blurTableWide" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="9"/></filter>
+                      <filter id="blurTableNear" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="2.2"/></filter>
+                    </defs>
+                    <circle cx="9" cy="13" r="98" fill="rgba(84,58,32,.13)" filter="url(#blurTableWide)"/>
+                    <circle cx="2.2" cy="3.4" r="99.2" fill="rgba(84,58,32,.16)" filter="url(#blurTableNear)"/>
+                  </svg>
+                </div>
+
+                <div class="cup-tilt" data-tilt>
+                  <!-- saucer -->
+                  <div class="cup-layer cup-layer--saucer" aria-hidden="true">
+                    <svg viewBox="-120 -120 240 240" focusable="false">
+                      <defs>
+                        <radialGradient id="saucerBase" cx="0" cy="0" r="100" gradientUnits="userSpaceOnUse">
+                          <stop offset="0" stop-color="#FFFFFF"/>
+                          <stop offset=".64" stop-color="#FCFAF6"/>
+                          <stop offset=".76" stop-color="#F3EEE5"/>
+                          <stop offset=".88" stop-color="#FAF7F1"/>
+                          <stop offset=".945" stop-color="#FFFFFF"/>
+                          <stop offset=".982" stop-color="#F1EBE1"/>
+                          <stop offset="1" stop-color="#E2D8C8"/>
+                        </radialGradient>
+                        <linearGradient id="saucerLight" x1="-.15" y1="-.15" x2="1.05" y2="1.05">
+                          <stop offset="0" stop-color="#FFFFFF" stop-opacity=".9"/>
+                          <stop offset=".45" stop-color="#FFFFFF" stop-opacity="0"/>
+                          <stop offset="1" stop-color="#8A6C3A" stop-opacity=".10"/>
+                        </linearGradient>
+                        <linearGradient id="slopeLight" x1="0" y1="0" x2="1" y2="1">
+                          <stop offset="0" stop-color="#7A5E30" stop-opacity=".07"/>
+                          <stop offset=".55" stop-color="#7A5E30" stop-opacity="0"/>
+                          <stop offset="1" stop-color="#FFFFFF" stop-opacity=".55"/>
+                        </linearGradient>
+                        <linearGradient id="goldLine" x1="0" y1="0" x2="1" y2="1">
+                          <stop offset="0" stop-color="#E2CC97"/>
+                          <stop offset=".35" stop-color="#B8995C"/>
+                          <stop offset=".7" stop-color="#9C7D45"/>
+                          <stop offset="1" stop-color="#C9AE73"/>
+                        </linearGradient>
+                        <mask id="rimRing"><circle r="100" fill="#fff"/><circle r="91" fill="#000"/></mask>
+                        <mask id="slopeRing"><circle r="92" fill="#fff"/><circle r="66" fill="#000"/></mask>
+                      </defs>
+                      <circle r="100" fill="url(#saucerBase)"/>
+                      <circle r="100" fill="url(#slopeLight)" mask="url(#slopeRing)"/>
+                      <circle r="100" fill="url(#saucerLight)" mask="url(#rimRing)"/>
+                      <circle r="96.6" fill="none" stroke="url(#goldLine)" stroke-width="1.05"/>
+                      <circle r="99.65" fill="none" stroke="rgba(122,94,48,.28)" stroke-width=".55"/>
+                      <image href="assets/img/logo-mark.svg" x="-66.5" y="49.5" width="15" height="15" opacity=".85"/>
+                    </svg>
+                  </div>
+
+                  <!-- shadow of the cup on the saucer -->
+                  <div class="cup-layer cup-layer--cupshadow" data-layer="cupshadow" aria-hidden="true">
+                    <svg viewBox="-120 -120 240 240" focusable="false">
+                      <defs>
+                        <filter id="blurCupWide" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="6"/></filter>
+                        <filter id="blurCupNear" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="1.6"/></filter>
+                      </defs>
+                      <g filter="url(#blurCupWide)" fill="rgba(84,58,32,.26)">
+                        <circle cx="8" cy="11" r="61"/>
+                        <g transform="translate(8 11) rotate(22)"><rect x="54" y="-6" width="42" height="12" rx="6"/></g>
+                      </g>
+                      <g filter="url(#blurCupNear)" fill="rgba(84,58,32,.20)">
+                        <circle cx="1.6" cy="2.4" r="61.6"/>
+                        <g transform="translate(2.6 3.6) rotate(22)"><rect x="56" y="-5.6" width="40" height="11.2" rx="5.6"/></g>
+                      </g>
+                    </svg>
+                  </div>
+
+                  <!-- cup: handle, rim, inner wall, coffee -->
+                  <div class="cup-layer cup-layer--cup" data-layer="cup">
+                    <svg viewBox="-120 -120 240 240" aria-hidden="true" focusable="false">
+                      <defs>
+                        <linearGradient id="handleShade" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0" stop-color="#FFFFFF"/>
+                          <stop offset=".45" stop-color="#FBF8F3"/>
+                          <stop offset=".8" stop-color="#EAE2D5"/>
+                          <stop offset="1" stop-color="#D8CDBB"/>
+                        </linearGradient>
+                        <radialGradient id="rimBase" cx="0" cy="0" r="62" gradientUnits="userSpaceOnUse">
+                          <stop offset=".88" stop-color="#E9E2D7"/>
+                          <stop offset=".915" stop-color="#FBF9F5"/>
+                          <stop offset=".945" stop-color="#FFFFFF"/>
+                          <stop offset=".975" stop-color="#F7F3EC"/>
+                          <stop offset=".992" stop-color="#E4DACB"/>
+                          <stop offset="1" stop-color="#CFC3B0"/>
+                        </radialGradient>
+                        <linearGradient id="rimLight" x1="0" y1="0" x2="1" y2="1">
+                          <stop offset="0" stop-color="#FFFFFF" stop-opacity=".95"/>
+                          <stop offset=".5" stop-color="#FFFFFF" stop-opacity="0"/>
+                          <stop offset="1" stop-color="#7A5E30" stop-opacity=".09"/>
+                        </linearGradient>
+                        <linearGradient id="wallShade" x1="0" y1="0" x2="1" y2="1">
+                          <stop offset="0" stop-color="#C9BCA8"/>
+                          <stop offset=".42" stop-color="#E6DDCF"/>
+                          <stop offset=".75" stop-color="#FBF8F2"/>
+                          <stop offset="1" stop-color="#FFFFFF"/>
+                        </linearGradient>
+                        <radialGradient id="cremaFallback" cx=".44" cy=".42" r=".6">
+                          <stop offset="0" stop-color="#B58552"/>
+                          <stop offset=".55" stop-color="#9E6C3E"/>
+                          <stop offset=".86" stop-color="#7A4D2A"/>
+                          <stop offset="1" stop-color="#5F3A1F"/>
+                        </radialGradient>
+                        <linearGradient id="goldRim" x1="0" y1="0" x2="1" y2="1">
+                          <stop offset="0" stop-color="#E4CF9C"/>
+                          <stop offset=".4" stop-color="#B8995C"/>
+                          <stop offset=".75" stop-color="#977841"/>
+                          <stop offset="1" stop-color="#CBB077"/>
+                        </linearGradient>
+                        <mask id="cupRim"><circle r="62" fill="#fff"/><circle r="55.4" fill="#000"/></mask>
+                      </defs>
+                      <!-- handle -->
+                      <g transform="rotate(22)">
+                        <path d="M56 -7.4 C62 -7.4 66 -6.2 70 -6.2 L90 -6.2 A6.2 6.2 0 0 1 90 6.2 L70 6.2 C66 6.2 62 7.4 56 7.4 Z" fill="url(#handleShade)"/>
+                        <path d="M60 -6.9 C64 -6.6 66.5 -6.2 70 -6.2 L90 -6.2" fill="none" stroke="#fff" stroke-width=".9" stroke-linecap="round" opacity=".9"/>
+                        <path d="M90 6.2 A6.2 6.2 0 0 0 90 -6.2" fill="none" stroke="rgba(122,94,48,.18)" stroke-width=".5" transform="translate(0 0)"/>
+                      </g>
+                      <!-- rim -->
+                      <circle r="62" fill="url(#rimBase)"/>
+                      <circle r="62" fill="url(#rimLight)" mask="url(#cupRim)"/>
+                      <circle r="61.15" fill="none" stroke="url(#goldRim)" stroke-width=".95"/>
+                      <circle r="61.95" fill="none" stroke="rgba(122,94,48,.22)" stroke-width=".4"/>
+                      <!-- inner wall -->
+                      <circle r="55.4" fill="url(#wallShade)"/>
+                      <!-- coffee (first paint + no-WebGL fallback; the canvas paints over it) -->
+                      <circle r="52" fill="url(#cremaFallback)"/>
+                      <g class="latte-fallback">
+                        <path fill="none" stroke="#5F3A1F" stroke-opacity=".28" stroke-width="2.4" d="M0 26 C-10 16 -30 6 -30 -10 C-30 -22 -20 -28 -11 -27 C-5 -26.5 -1.5 -23 0 -19 C1.5 -23 5 -26.5 11 -27 C20 -28 30 -22 30 -10 C30 6 10 16 0 26 Z"/>
+                        <path fill="#FBF5EA" d="M0 26 C-10 16 -30 6 -30 -10 C-30 -22 -20 -28 -11 -27 C-5 -26.5 -1.5 -23 0 -19 C1.5 -23 5 -26.5 11 -27 C20 -28 30 -22 30 -10 C30 6 10 16 0 26 Z"/>
+                        <path fill="none" stroke="#FBF5EA" stroke-width="1.3" stroke-linecap="round" d="M0 24 L0 37"/>
+                      </g>
+                    </svg>
+                    <canvas class="cup__coffee" data-coffee aria-hidden="true"></canvas>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <p class="hero__hint" data-hint>
+            <span class="hero__hint-fine">Move your cursor over the cup to stir the latte</span>
+            <span class="hero__hint-touch">Drag across the cup to stir the latte</span>
+          </p>
+        </div>
+      </div>
+
+      <div class="hero__foot container">
+        <a class="scroll-cue" href="#menu">
+          <span class="scroll-cue__track" aria-hidden="true"><span class="scroll-cue__dot"></span></span>
+          <span>Scroll</span>
+        </a>
+      </div>
+    </section>
+
+    <!-- ============ Placeholder content (so scrolling can be tested) ============ -->
+    <section class="next" id="menu" data-reveal>
+      <div class="container next__inner">
+        <h2 class="next__title display" data-reveal-item>From your first sip to your last bite</h2>
+        <p class="next__text lede" data-reveal-item>Placeholder section. The menu, White Rewards and the visit details will follow here in the full site.</p>
+        <ul class="next__list" role="list">
+          <li class="next__item card" id="rewards" data-reveal-item>
+            <h3 class="next__item-title">White Rewards</h3>
+            <p class="muted">Collect beans with every order and swap them for a free drink.</p>
+          </li>
+          <li class="next__item card" id="visit" data-reveal-item>
+            <h3 class="next__item-title">Visit</h3>
+            <p class="muted">Hulhumalé, Maldives. Open every day from 4 PM to midnight.</p>
+          </li>
+        </ul>
+      </div>
+    </section>
+  </main>
+
+  <div class="cursor-ring" aria-hidden="true" data-cursor></div>
+</body>
+</html>
