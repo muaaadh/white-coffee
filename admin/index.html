@@ -4,9 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="robots" content="noindex">
-  <meta name="theme-color" content="#FBF8F2">
-  <title>Admin — White Coffee House</title>
-  <meta name="description" content="Back office for White Coffee House: the counter, White Rewards members, rewards, menu, offers and programme settings.">
+  <meta name="theme-color" content="#4A2311">
+  <title>Back office · White Coffee House</title>
+  <meta name="description" content="Back office for White Coffee House: the counter, karaoke room bookings, White Rewards members, rewards, menu, offers and programme settings.">
   <link rel="icon" href="../assets/img/logo-mark.svg" type="image/svg+xml">
   <link rel="stylesheet" href="../assets/css/base.css">
   <link rel="stylesheet" href="admin.css">
@@ -16,14 +16,17 @@
 
   <!-- Staff sign in -->
   <div class="signin" id="signin" hidden>
-    <div class="signin-inner">
+    <div class="signin-cover on-leather">
       <a class="signin-brand" href="../" aria-label="White Coffee House website">
-        <img src="../assets/img/logo-mark.svg" alt="" width="76" height="76">
+        <span class="mark mark--xl" aria-hidden="true"></span>
         <span class="wordmark signin-wordmark">White Coffee House</span>
       </a>
-      <form class="card signin-card" id="signin-form" novalidate>
-        <h1 class="display signin-title">Staff sign in</h1>
-        <p class="signin-lede">The back office for the counter, White Rewards and the menu.</p>
+      <p class="signin-cover-txt">Back office</p>
+    </div>
+    <div class="signin-main">
+      <form class="signin-form" id="signin-form" novalidate>
+        <h1 class="signin-title">Staff sign in</h1>
+        <p class="signin-lede">The counter, karaoke bookings, White Rewards and the menu.</p>
         <div class="field">
           <label for="si-email">Email</label>
           <input class="input" id="si-email" name="email" type="email" value="manager@whitecoffeehouse.mv" autocomplete="username" spellcheck="false">
@@ -41,11 +44,11 @@
         </fieldset>
         <p class="form-error" id="si-error" role="alert" hidden></p>
         <button class="btn btn--lg btn--block" type="submit">Sign in</button>
-        <p class="demo-note signin-demo">This is a demo — any password works.</p>
+        <p class="demo-note signin-demo">Demo: any password works.</p>
       </form>
       <p class="signin-links">
-        <a href="../">Back to the website</a>
-        <span aria-hidden="true">·</span>
+        <a href="../">Website</a>
+        <a href="../karaoke/">Karaoke booking page</a>
         <a href="../portal/">Customer portal</a>
       </p>
     </div>
@@ -53,30 +56,32 @@
 
   <!-- Back office -->
   <div class="app" id="app" hidden>
-    <aside class="sidebar" aria-label="Admin">
+    <aside class="sidebar on-leather" aria-label="Back office">
       <a class="side-brand" href="#dashboard">
-        <img src="../assets/img/logo-mark.svg" alt="" width="42" height="42">
+        <span class="mark mark--md" aria-hidden="true"></span>
         <span class="side-brand-txt">
-          <span class="brand__name">White Coffee House</span>
-          <span class="side-sub">Admin</span>
+          <span class="wordmark side-wordmark">White Coffee House</span>
+          <span class="side-sub">Back office</span>
         </span>
       </a>
       <nav class="side-nav" id="side-nav" aria-label="Sections"></nav>
       <div class="side-foot">
+        <p class="side-foot-h">Open in a new tab</p>
         <a class="side-link" href="../" target="_blank" rel="noopener" id="side-site"></a>
+        <a class="side-link" href="../karaoke/" target="_blank" rel="noopener" id="side-karaoke"></a>
         <a class="side-link" href="../portal/" target="_blank" rel="noopener" id="side-portal"></a>
         <div class="side-user">
           <span class="avatar" data-staff-initials aria-hidden="true"></span>
           <span class="side-user-txt"><strong data-staff-name></strong><span>On shift</span></span>
-          <button class="icon-btn" type="button" data-act="signout" id="side-signout" aria-label="Sign out"></button>
+          <button class="side-out" type="button" data-act="signout" id="side-signout" aria-label="Sign out"></button>
         </div>
       </div>
     </aside>
 
-    <header class="topbar">
-      <a class="topbar-brand" href="#dashboard" aria-label="White Coffee House admin — dashboard">
-        <img src="../assets/img/logo-mark.svg" alt="" width="34" height="34">
-        <span class="topbar-txt" aria-hidden="true"><span class="brand__name">White Coffee House</span><span class="topbar-sub">Admin</span></span>
+    <header class="topbar on-leather">
+      <a class="topbar-brand" href="#dashboard" aria-label="White Coffee House back office, dashboard">
+        <span class="mark mark--sm" aria-hidden="true"></span>
+        <span class="topbar-txt" aria-hidden="true"><span class="wordmark">White Coffee House</span><span class="topbar-sub">Back office</span></span>
       </a>
       <a class="codes-pill" href="#counter" id="codes-pill" hidden></a>
       <button class="avatar-btn" type="button" data-act="more" id="topbar-user" aria-haspopup="dialog"></button>

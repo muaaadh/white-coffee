@@ -1,15 +1,20 @@
 /* ==========================================================================
-   White Coffee House — website one-pager (index.html)
-   - header: solid after 24px, hides on scroll down / returns on scroll up,
-     active-section highlight, mobile sheet with focus trap + Escape
-   - live data from window.WCH (store.js): menu tabs, favourites, White Rewards
-     rules, tiers, rewards, hours, open/closed status; re-renders on
-     WCH.subscribe, so admin-portal edits appear here live
+   White Coffee House — website one-pager (index.html), v2
+   - header: solid after 24px, hides on scroll down / returns on scroll up
+     (html.hdr-hidden lets the sticky menu bar follow it), active-section
+     highlight, mobile sheet with focus trap + Escape
+   - live data from window.WCH (store.js): the printed menu (Food / Drinks
+     tabs, category bar with scroll-spy, photo spreads), house specials,
+     karaoke rooms with tonight's next free slot, White Rewards numbers,
+     tiers and rewards, hours, open / closed. Re-renders on WCH.subscribe,
+     so admin-portal edits (prices, sold out, rooms) appear here live.
    - motion: ONE rAF scroll driver (scrollY read once per frame; layout is
      measured on resize only), IntersectionObserver reveals, image parallax,
-     word-fill scrub, coffee-card scrub, membership-card tilt
+     word-fill scrub
    - prefers-reduced-motion: everything visible, nothing moves
    The hero (hero.js/hero.css) and the bean emblem (beans.js) are separate.
+   Every block is guarded, so a page that reuses the header (karaoke/) can
+   load this file without the homepage sections.
    ========================================================================== */
 (() => {
   'use strict';
@@ -20,19 +25,11 @@
   const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
   const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
   const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const FINE = matchMedia('(hover: hover) and (pointer: fine)').matches;
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const num = (n) => Number(n || 0).toLocaleString('en-US', { maximumFractionDigits: 2 });
   const ordinal = (n) => { const s = ['th', 'st', 'nd', 'rd'], v = n % 100; return n + (s[(v - 20) % 10] || s[v] || s[0]); };
+  const andList = (a) => a.length < 2 ? a.join('') : a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1];
   const safe = (fn) => { try { fn(); } catch (e) { console.error(e); } };
-
-  const IC = {
-    cup: '<path d="M4.5 9.5h11.5v3.75a5 5 0 0 1-5 5H9.5a5 5 0 0 1-5-5V9.5Z"/><path d="M16 10.75h1.4a2.35 2.35 0 0 1 0 4.7H15.6"/><path d="M3.5 21h14"/><path d="M8 3.25c-.7.9.7 1.85 0 2.75M11.75 3.25c-.7.9.7 1.85 0 2.75"/>',
-    food: '<path d="M6.5 3v6.25a2 2 0 0 0 2 2V21M10.5 3v6.25a2 2 0 0 1-2 2M8.5 3v5"/><path d="M17.5 21V3c-2.2 1.4-3.25 4-3.25 7.25v3.25h3.25"/>',
-    gift: '<rect x="3.5" y="8.5" width="17" height="4" rx="1"/><path d="M5 12.5v7a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-7M12 8.5v12M12 8.5C10.5 5 6.5 4.5 6.5 7c0 1.5 2.5 1.5 5.5 1.5Zm0 0C13.5 5 17.5 4.5 17.5 7c0 1.5-2.5 1.5-5.5 1.5Z"/>',
-    check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>'
-  };
-  const icon = (name) => '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false">' + (IC[name] || '') + '</svg>';
 
   /* ====================================================================== */
   /* Scroll driver: one rAF loop, on demand                                 */
@@ -68,21 +65,29 @@
   const toggle = $('#menu-btn');
   const sheet = $('#menu-sheet');
   const navLinks = $$('[data-nav]');
-  const SECTIONS = ['menu', 'rewards', 'space', 'visit'];
+  const SECTIONS = ['menu', 'karaoke', 'rewards', 'visit'];
   let menuOpen = false;
   let headerHidden = false;
+  let headerH = header ? header.offsetHeight : 0;
 
   function setHidden(h) {
     if (h === headerHidden) return;
     headerHidden = h;
-    header.classList.toggle('is-hidden', h);
+    if (header) header.classList.toggle('is-hidden', h);
+    root.classList.toggle('hdr-hidden', h);
   }
 
   if (header) {
-    let tops = [], docH = 0, lastY = window.scrollY, solid = null, active;
+    let ranges = [], docH = 0, lastY = window.scrollY, solid = null, active;
     tasks.push({
       measure() {
-        tops = SECTIONS.map((id) => { const el = document.getElementById(id); return el ? docTop(el) : Infinity; });
+        headerH = header.offsetHeight;
+        ranges = SECTIONS.map((id) => {
+          const el = document.getElementById(id);
+          if (!el) return { id, top: Infinity, bottom: -Infinity };
+          const top = docTop(el);
+          return { id, top, bottom: top + el.offsetHeight };
+        });
         docH = root.scrollHeight;
       },
       update(y, h) {
@@ -97,8 +102,9 @@
 
         const line = y + h * 0.38;
         let cur = null;
-        for (let i = 0; i < tops.length; i++) if (line >= tops[i]) cur = SECTIONS[i];
-        if (cur && y + h >= docH - 2) cur = SECTIONS[SECTIONS.length - 1];
+        for (const r of ranges) if (line >= r.top && line < r.bottom) cur = r.id;
+        const last = ranges[ranges.length - 1];
+        if (last && last.bottom > -Infinity && y + h >= docH - 2) cur = last.id;
         if (cur !== active) {
           active = cur;
           for (const a of navLinks) {
@@ -145,8 +151,7 @@
   }
 
   // Capture phase on document: our handler runs before any handler bound on the
-  // toggle or the nav itself (the hero prototype binds its own), and stops them,
-  // so the header has exactly one owner.
+  // toggle or the nav itself, and stops them, so the header has exactly one owner.
   document.addEventListener('click', (e) => {
     const t = e.target instanceof Element ? e.target : null;
     if (!t) return;
@@ -170,23 +175,26 @@
   syncToggle();
 
   /* ====================================================================== */
-  /* Reveals (IntersectionObserver)                                         */
+  /* Reveals (IntersectionObserver). Re-entrant: rendered blocks call it.   */
   /* ====================================================================== */
-  const groups = $$('[data-reveal]');
-  for (const g of groups) { let i = 0; for (const el of $$('.mask__in, .rv', g)) el.style.setProperty('--i', i++); }
-  function revealAll() { for (const g of groups) g.classList.add('is-in'); }
-  if (REDUCED || !('IntersectionObserver' in window)) revealAll();
-  else {
-    const io = new IntersectionObserver((entries) => {
-      for (const en of entries) {
-        if (!en.isIntersecting) continue;
-        if (en.intersectionRatio >= 0.15 || en.intersectionRect.height >= window.innerHeight * 0.3) {
-          en.target.classList.add('is-in');
-          io.unobserve(en.target);
-        }
+  const revealIO = (REDUCED || !('IntersectionObserver' in window)) ? null : new IntersectionObserver((entries) => {
+    for (const en of entries) {
+      if (!en.isIntersecting) continue;
+      if (en.intersectionRatio >= 0.12 || en.intersectionRect.height >= window.innerHeight * 0.3) {
+        en.target.classList.add('is-in');
+        revealIO.unobserve(en.target);
       }
-    }, { threshold: [0, 0.15, 0.3], rootMargin: '0px 0px -8% 0px' });
-    for (const g of groups) io.observe(g);
+    }
+  }, { threshold: [0, 0.12, 0.3], rootMargin: '0px 0px -8% 0px' });
+
+  function observeReveals(scope) {
+    for (const g of $$('[data-reveal]', scope || document)) {
+      if (g.dataset.revealBound) continue;
+      g.dataset.revealBound = '1';
+      let i = 0;
+      for (const el of $$('.mask__in, .rv', g)) el.style.setProperty('--i', i++);
+      if (revealIO) revealIO.observe(g); else g.classList.add('is-in');
+    }
   }
 
   /* ====================================================================== */
@@ -204,8 +212,8 @@
       tasks.push({
         measure() { top = docTop(statement); h = statement.offsetHeight; },
         update(y, vh) {
-          // starts as the line rises past 78% of the viewport, done once its last line passes 42%
-          const start = top - vh * 0.78, end = top + h - vh * 0.42;
+          // starts as the line rises past 80% of the viewport, done once its last line passes 45%
+          const start = top - vh * 0.8, end = top + h - vh * 0.45;
           const p = clamp((y - start) / Math.max(1, end - start), 0, 1);
           const n = Math.round(p * spans.length);
           if (n !== lit) { lit = n; spans.forEach((s, i) => s.classList.toggle('is-lit', i < n)); }
@@ -219,28 +227,33 @@
   /* Parallax (inner wrapper only; the frame clips it)                      */
   /* ====================================================================== */
   if (!REDUCED) {
-    for (const el of $$('[data-parallax]')) {
-      const frameEl = el.parentElement;
-      const amp = 24;
-      let top = 0, h = 0, last = null;
-      tasks.push({
-        measure() { top = docTop(frameEl); h = frameEl.offsetHeight; },
-        update(y, vh) {
-          if (!h || top > y + vh + 80 || top + h < y - 80) return false;
-          const p = clamp((y + vh - top) / (vh + h), 0, 1);
-          const ty = Math.round((p - 0.5) * 2 * amp * 10) / 10;
-          if (ty !== last) { last = ty; el.style.transform = 'translate3d(0,' + ty + 'px,0)'; }
-          return false;
+    let items = [];
+    const AMP = 24;
+    tasks.push({
+      measure() {
+        items = $$('[data-parallax]').map((el) => {
+          const f = el.parentElement;
+          return { el, top: docTop(f), h: f.offsetHeight, last: null };
+        }).filter((p) => p.h > 0);
+      },
+      update(y, vh) {
+        for (const p of items) {
+          if (p.top > y + vh + 80 || p.top + p.h < y - 80) continue;
+          const k = clamp((y + vh - p.top) / (vh + p.h), 0, 1);
+          const ty = Math.round((k - 0.5) * 2 * AMP * 10) / 10;
+          if (ty !== p.last) { p.last = ty; p.el.style.transform = 'translate3d(0,' + ty + 'px,0)'; }
         }
-      });
-    }
+        return false;
+      }
+    });
   }
 
   /* ====================================================================== */
   /* Live data                                                              */
   /* ====================================================================== */
   const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-  const clock = (hhmm) => { const s = W.fmtClock(hhmm); return s === 'midnight' ? '12 AM' : s; };
+  const NUM_WORDS = ['No', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight'];
+  const span = (a, b) => W.fmtClock(a) + ' to ' + W.fmtClock(b);       // '4 PM to midnight'
 
   /* ---------------- open / closed + hours ---------------- */
   let shownDay = -1;
@@ -250,7 +263,7 @@
       el.classList.toggle('is-open', !!s.open);
       el.classList.toggle('is-closed', !s.open);
       const txt = $('[data-status-text]', el);
-      if (txt) txt.textContent = s.label + (s.detail ? ' · ' + s.detail : '');
+      if (txt) txt.textContent = s.label + (s.detail ? ', ' + s.detail : '');
     }
   }
   function renderHours(force) {
@@ -266,258 +279,334 @@
       const h = byDay[d], isToday = d === today;
       html += '<tr' + (isToday ? ' class="is-today"' : '') + '>' +
         '<th scope="row">' + DAYS[d] + (isToday ? '<span class="hours__today">Today</span>' : '') + '</th>' +
-        '<td>' + (h ? clock(h.open) + ' – ' + clock(h.close) : 'Closed') + '</td></tr>';
+        '<td>' + (h ? span(h.open, h.close) : 'Closed') + '</td></tr>';
     }
     body.innerHTML = html;
     const note = $('[data-hours-note]');
-    if (note) note.textContent = W.info.hoursNote ? W.info.hoursNote + ' hours' : 'Opening hours';
+    if (note) note.textContent = (W.info.hoursNote ? W.info.hoursNote + ', ' : '') + 'Malé time';
   }
   function bindInfo() {
     for (const el of $$('[data-info]')) { const v = W.info[el.dataset.info]; if (v) el.textContent = v; }
     for (const el of $$('[data-info-href]')) { const v = W.info[el.dataset.infoHref]; if (v) el.setAttribute('href', v); }
   }
 
-  /* ---------------- favourites ---------------- */
-  function renderFavs() {
-    for (const li of $$('[data-fav]')) {
-      const m = W.menuItem(li.dataset.fav);
+  /* ---------------- house specials (labels on the photo) ---------------- */
+  function renderSpecials() {
+    const box = $('[data-specials]');
+    if (!box) return;
+    const shown = [];
+    for (const li of $$('[data-item]', box)) {
+      const m = W.menuItem(li.dataset.item);
+      li.hidden = !m;
       if (!m) continue;
       const out = m.available === false;
+      li.classList.toggle('is-out', out);
       $('[data-f="name"]', li).textContent = m.name;
-      $('[data-f="price"]', li).innerHTML = out ? '<s>' + esc(W.fmt.mvr(m.price)) + '</s>' : esc(W.fmt.mvr(m.price));
-      let note = $('.fav__note', li);
-      if (out && !note) { note = document.createElement('p'); note.className = 'fav__note'; note.textContent = 'Sold out today'; $('.fav__link', li).appendChild(note); }
+      $('[data-f="price"]', li).innerHTML = (out ? '<span class="visually-hidden">Sold out today, </span>' : '') + 'MVR ' + esc(num(m.price));
+      let note = $('.stag__out', li);
+      if (out && !note) { note = document.createElement('span'); note.className = 'stag__out'; note.setAttribute('aria-hidden', 'true'); note.textContent = 'Sold out today'; li.appendChild(note); }
       if (!out && note) note.remove();
+      shown.push(m);
+    }
+    const priceEl = $('[data-specials-price]');
+    if (priceEl && shown.length) {
+      const prices = [...new Set(shown.map((m) => m.price))];
+      priceEl.textContent = prices.length === 1 ? 'MVR ' + num(prices[0]) + (shown.length > 1 ? ' each' : '') : andList(shown.map((m) => 'MVR ' + num(m.price)));
     }
   }
 
   /* ---------------- menu ---------------- */
-  const tabsEl = $('[data-menu-tabs]');
-  const panelsEl = $('[data-menu-panels]');
-  const photosEl = $('[data-menu-photos]');
-  let activeCat = null, tabsSig = '';
+  const menuBook = $('[data-menu]');
+  const mbar = $('[data-mbar]');
+  const tabs = $$('[data-menu-tabs] [role="tab"]');
+  const GROUPS = tabs.map((t) => t.dataset.group);
+  // The House specials section above already shows this photo big.
+  const FEATURED_PHOTOS = new Set($('[data-specials]') ? ['fried-noodles-rice'] : []);
+  const PHOTO_ALT = {
+    'breakfast-spread': "A Maldivian breakfast of mas'huni with roshi, a grilled breakfast platter and a bowl of chicken and mushroom soup, on white plates with gold rims",
+    'fried-noodles-rice': 'Special fried noodles and special fried rice topped with a fried egg, with gold cutlery',
+    'wraps-sandwiches': 'Chicken wraps with fries, and a sandwich platter of triangle sandwiches with fries and salad',
+    'fries-rings-salad': 'French fries and onion rings with dips, and a tuna and egg salad',
+    'cookies-brownie': 'Chocolate chip cookies, and chocolate brownies with strawberries and blueberries',
+    'milkshake-juice': 'A passionfruit juice with lime and mint, next to a chocolate milkshake'
+  };
+  let activeGroup = GROUPS[0] || 'food';
+  let menuSig = '';
+  let spyActive;
+  let spyHold = null;
+  const catSigs = {};
 
+  const groupOf = (c) => c.group || 'food';
   function itemHTML(m) {
     const out = m.available === false;
-    const price = '<span class="visually-hidden">MVR </span>' + esc(num(m.price));
-    return '<li class="mi' + (out ? ' is-out' : '') + '">' +
-      '<div class="mi__top"><h4 class="mi__name">' + esc(m.name) + '</h4>' +
-      (m.signature ? '<span class="chip mi__chip">Signature</span>' : '') +
-      '<span class="mi__price">' + (out ? '<s>' + price + '</s>' : price) + '</span></div>' +
-      (m.desc ? '<p class="mi__desc">' + esc(m.desc) + '</p>' : '') +
-      (out ? '<p class="mi__out">Sold out today</p>' : '') +
+    return '<li class="mi' + (out ? ' is-out' : '') + '" data-item="' + esc(m.id) + '">' +
+      '<span class="mi__name">' + esc(m.name) + '</span>' +
+      '<span class="mi__price"><span class="visually-hidden">' + (out ? 'Sold out today, ' : '') + 'MVR </span>' + esc(num(m.price)) + '</span>' +
+      (m.desc ? '<span class="mi__desc">' + esc(m.desc) + '</span>' : '') +
+      (out ? '<span class="mi__out" aria-hidden="true">Sold out today</span>' : '') +
       '</li>';
   }
-  function panelHTML(c) {
-    const items = W.menu(c.id);
-    return '<h3 class="menu__cat">' + esc(c.name) + '</h3>' +
-      (c.blurb ? '<p class="menu__blurb">' + esc(c.blurb) + '</p>' : '') +
-      '<ul class="menu__list" role="list">' + items.map(itemHTML).join('') + '</ul>';
+  function catItemsSig(id) { return W.menu(id).map((m) => [m.name, m.price, m.available !== false, m.desc].join('~')).join('|'); }
+  function catHTML(c) {
+    const id = esc(c.id);
+    catSigs[c.id] = catItemsSig(c.id);
+    return '<section class="mcat" id="cat-' + id + '" aria-labelledby="cat-' + id + '-h" data-cat="' + id + '">' +
+      '<h3 class="mcat__title" id="cat-' + id + '-h">' + esc(c.name) + '</h3>' +
+      '<ul class="mcat__items" role="list" data-cat-items="' + id + '">' + W.menu(c.id).map(itemHTML).join('') + '</ul>' +
+      '</section>';
+  }
+  /** Consecutive categories that share a photo become one photo spread (the way the printed menu pairs a photo page
+      with a list page); the rest are set as text spreads in two columns. */
+  function spreadsFor(group) {
+    const used = new Set(FEATURED_PHOTOS), blocks = [];
+    let cur = null;
+    for (const c of W.categories().filter((x) => groupOf(x) === group)) {
+      if (c.photo && !used.has(c.photo)) { used.add(c.photo); cur = { photo: c.photo, cats: [c] }; blocks.push(cur); }
+      else if (c.photo && cur && cur.photo === c.photo) cur.cats.push(c);
+      else { if (!cur || cur.photo) { cur = { photo: null, cats: [] }; blocks.push(cur); } cur.cats.push(c); }
+    }
+    return blocks;
+  }
+  function pictured(b) {
+    const ids = b.cats.map((c) => c.id);
+    return W.menu().filter((m) => m.photo === b.photo && ids.indexOf(m.cat) >= 0).map((m) => m.name);
+  }
+  function spreadHTML(b, flip) {
+    if (!b.photo) {
+      return '<div class="spread spread--text' + (b.cats.length === 1 ? ' spread--single' : '') + '" data-reveal>' +
+        '<div class="spread__cols rv">' + b.cats.map(catHTML).join('') + '</div></div>';
+    }
+    const src = 'assets/img/menu/' + b.photo;
+    const names = pictured(b);
+    return '<div class="spread spread--photo' + (flip ? ' spread--flip' : '') + '" data-reveal>' +
+      '<figure class="spread__photo rv"><span class="ph ph--menu"><span class="ph__in">' +
+        '<img src="' + src + '-800.webp" srcset="' + src + '-800.webp 800w, ' + src + '-1086.webp 1086w" sizes="(min-width: 900px) 470px, 100vw" width="1086" height="1448" alt="' + esc(PHOTO_ALT[b.photo] || '') + '" loading="lazy" decoding="async">' +
+      '</span></span>' +
+      (names.length ? '<figcaption class="spread__cap" data-cap="' + esc(b.photo) + '">Pictured: ' + esc(andList(names)) + '</figcaption>' : '') +
+      '</figure>' +
+      '<div class="spread__list rv">' + b.cats.map(catHTML).join('') + '</div>' +
+      '</div>';
+  }
+  function structureSig() {
+    return W.categories().map((c) => [c.id, c.name, groupOf(c), c.photo || '', W.menu(c.id).map((m) => m.id).join(',')].join(':')).join('|');
+  }
+  function buildMenu() {
+    for (const g of GROUPS) {
+      const panel = $('[data-menu-panel="' + g + '"]');
+      const nav = $('[data-menu-cats="' + g + '"]');
+      if (!panel || !nav) continue;
+      let flip = false;
+      panel.innerHTML = spreadsFor(g).map((b) => { const h = spreadHTML(b, b.photo ? flip : false); if (b.photo) flip = !flip; return h; }).join('') +
+        '<p class="mnote" data-price-note>' + esc(W.info.priceNote) + '</p>';
+      nav.innerHTML = W.categories().filter((c) => groupOf(c) === g)
+        .map((c) => '<a class="mcat-link" href="#cat-' + esc(c.id) + '" data-cat-link="' + esc(c.id) + '">' + esc(c.name) + '</a>').join('');
+    }
+    observeReveals(menuBook);
+    spyActive = undefined;
   }
   function renderMenu() {
-    if (!tabsEl || !panelsEl) return;
-    const cats = W.categories();
-    if (!cats.length) return;
-    if (!activeCat || !cats.some((c) => c.id === activeCat)) activeCat = cats[0].id;
-    const sig = cats.map((c) => c.id + ':' + c.name).join('|');
-    if (sig !== tabsSig) {
-      const focused = document.activeElement && tabsEl.contains(document.activeElement) ? document.activeElement.dataset.tab : null;
-      tabsSig = sig;
-      tabsEl.innerHTML = cats.map((c) =>
-        '<button class="mtab" type="button" role="tab" id="mtab-' + esc(c.id) + '" aria-controls="mpanel-' + esc(c.id) + '" aria-selected="false" tabindex="-1" data-tab="' + esc(c.id) + '">' + esc(c.name) + '</button>').join('');
-      panelsEl.innerHTML = cats.map((c) =>
-        '<div class="menu__panel" role="tabpanel" id="mpanel-' + esc(c.id) + '" aria-labelledby="mtab-' + esc(c.id) + '" tabindex="0" data-panel="' + esc(c.id) + '"></div>').join('');
-      if (focused) { const b = $('[data-tab="' + focused + '"]', tabsEl); if (b) b.focus(); }
+    if (!menuBook || !GROUPS.length) return;
+    const sig = structureSig();
+    if (sig !== menuSig) { menuSig = sig; buildMenu(); return; }
+    // same structure: patch only the lists (and photo captions) that changed
+    for (const c of W.categories()) {
+      const s = catItemsSig(c.id);
+      if (catSigs[c.id] === s) continue;
+      catSigs[c.id] = s;
+      const list = $('[data-cat-items="' + c.id + '"]', menuBook);
+      if (list) list.innerHTML = W.menu(c.id).map(itemHTML).join('');
     }
-    for (const c of cats) { const p = document.getElementById('mpanel-' + c.id); if (p) p.innerHTML = panelHTML(c); }
-    selectTab(activeCat, false);
+    for (const g of GROUPS) for (const b of spreadsFor(g)) {
+      if (!b.photo) continue;
+      const cap = $('[data-cap="' + b.photo + '"]', menuBook);
+      const names = pictured(b);
+      if (cap && names.length) cap.textContent = 'Pictured: ' + andList(names);
+    }
+    for (const n of $$('[data-price-note]', menuBook)) n.textContent = W.info.priceNote;
   }
-  function selectTab(id, focus) {
-    activeCat = id;
-    for (const b of $$('.mtab', tabsEl)) {
-      const on = b.dataset.tab === id;
-      b.setAttribute('aria-selected', String(on));
-      b.tabIndex = on ? 0 : -1;
-      if (on) {
-        if (focus) b.focus();
-        // keep the active pill in view in the phone pill row (horizontal only; never scrolls the page)
-        if (tabsEl.scrollWidth > tabsEl.clientWidth + 1) {
-          const left = b.offsetLeft - tabsEl.offsetLeft, right = left + b.offsetWidth;
-          if (left < tabsEl.scrollLeft + 16) tabsEl.scrollTo({ left: Math.max(0, left - 16), behavior: REDUCED ? 'auto' : 'smooth' });
-          else if (right > tabsEl.scrollLeft + tabsEl.clientWidth - 16) tabsEl.scrollTo({ left: right - tabsEl.clientWidth + 16, behavior: REDUCED ? 'auto' : 'smooth' });
-        }
-      }
+
+  /* tabs: Food / Drinks (automatic activation, roving tabindex) */
+  function selectGroup(g, opts) {
+    opts = opts || {};
+    if (GROUPS.indexOf(g) < 0) return;
+    activeGroup = g;
+    for (const t of tabs) {
+      const on = t.dataset.group === g;
+      t.setAttribute('aria-selected', String(on));
+      t.tabIndex = on ? 0 : -1;
+      if (on && opts.focus) t.focus();
     }
-    for (const p of $$('.menu__panel', panelsEl)) p.classList.toggle('is-active', p.dataset.panel === id);
-    if (photosEl) {
-      const imgs = $$('img', photosEl);
-      const has = imgs.some((img) => img.dataset.cat === id);
-      for (const img of imgs) img.classList.toggle('is-active', has ? img.dataset.cat === id : img === imgs[0]);
+    for (const p of $$('[data-menu-panel]')) p.hidden = p.dataset.menuPanel !== g;
+    for (const n of $$('[data-menu-cats]')) n.hidden = n.dataset.menuCats !== g;
+    spyActive = undefined;
+    spyHold = null;
+    if (opts.scroll && menuBook) {
+      // when the bar is stuck deep inside the other list, bring the new list's first page into view
+      const target = docTop(menuBook) - headerH;
+      if (window.scrollY > target + 2) window.scrollTo({ top: target, behavior: REDUCED ? 'auto' : 'smooth' });
     }
+    scheduleMeasure();
   }
-  if (tabsEl) {
-    tabsEl.addEventListener('click', (e) => { const b = e.target.closest('.mtab'); if (b) selectTab(b.dataset.tab, false); });
-    tabsEl.addEventListener('keydown', (e) => {
-      const tabs = $$('.mtab', tabsEl);
+  if (tabs.length) {
+    const tablist = $('[data-menu-tabs]');
+    tablist.addEventListener('click', (e) => { const t = e.target.closest('[role="tab"]'); if (t) selectGroup(t.dataset.group, { scroll: true }); });
+    tablist.addEventListener('keydown', (e) => {
       const i = tabs.indexOf(document.activeElement);
       if (i < 0) return;
       let j = null;
-      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') j = (i + 1) % tabs.length;
-      else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') j = (i - 1 + tabs.length) % tabs.length;
+      if (e.key === 'ArrowRight') j = (i + 1) % tabs.length;
+      else if (e.key === 'ArrowLeft') j = (i - 1 + tabs.length) % tabs.length;
       else if (e.key === 'Home') j = 0;
       else if (e.key === 'End') j = tabs.length - 1;
       if (j === null) return;
       e.preventDefault();
-      selectTab(tabs[j].dataset.tab, true);
+      selectGroup(tabs[j].dataset.group, { focus: true });
     });
   }
-  // A favourite card opens its category, then the normal #menu jump happens.
-  document.addEventListener('click', (e) => {
-    const a = e.target instanceof Element ? e.target.closest('a[data-cat]') : null;
-    if (a && W) selectTab(a.dataset.cat, false);
-  });
 
-  /* ---------------- White Rewards ---------------- */
-  const stampsEl = $('[data-stamps]');
-  let stampSlots = [], stampTotal = 0, stampShown = -1;
-
-  function renderStampSlots() {
-    const n = Math.max(1, W.program.stampsForFree | 0);
-    if (n === stampTotal) return;
-    stampTotal = n;
-    stampShown = -1;
-    const list = $('[data-stamp-slots]', stampsEl);
-    list.style.setProperty('--cols', n <= 6 ? n : Math.ceil(n / 2));
-    let html = '';
-    for (let i = 0; i < n; i++) {
-      const last = i === n - 1;
-      html += '<li class="slot' + (last ? ' slot--free' : '') + '"><span class="slot__ring">' + icon(last ? 'gift' : 'cup') +
-        (last ? '<span class="slot__free">Free</span>' : '') + '</span></li>';
-    }
-    list.innerHTML = html;
-    stampSlots = $$('.slot', list);
-    $('[data-stamp-total]', stampsEl).textContent = n;
-    applyStamps(REDUCED ? n : 0);
+  /* category bar: scroll-spy + keep the active link in view (horizontally only) */
+  function revealLink(link) {
+    const box = link.parentElement;
+    if (!box || box.scrollWidth <= box.clientWidth + 1) return;
+    const left = link.offsetLeft - box.offsetLeft, right = left + link.offsetWidth;
+    const pad = 24;
+    if (left < box.scrollLeft + pad) box.scrollTo({ left: Math.max(0, left - pad), behavior: REDUCED ? 'auto' : 'smooth' });
+    else if (right > box.scrollLeft + box.clientWidth - pad) box.scrollTo({ left: right - box.clientWidth + pad, behavior: REDUCED ? 'auto' : 'smooth' });
   }
-  function applyStamps(count) {
-    if (count === stampShown) return;
-    stampShown = count;
-    stampSlots.forEach((s, i) => s.classList.toggle('is-filled', i < count));
-    $('[data-stamp-count]', stampsEl).textContent = count;
-    const toGo = stampTotal - count;
-    $('[data-stamp-line]', stampsEl).textContent =
-      count === 0 ? 'Every handcrafted drink earns a stamp.' :
-      toGo === 0 ? 'Card full. Your next drink is on us.' :
-      toGo === 1 ? 'One more stamp to go.' :
-      toGo + ' more stamps to a free drink.';
+  function setSpy(id) {
+    if (id === spyActive) return;
+    spyActive = id;
+    const nav = $('[data-menu-cats="' + activeGroup + '"]');
+    if (!nav) return;
+    for (const a of $$('.mcat-link', nav)) {
+      const on = a.dataset.catLink === id;
+      a.classList.toggle('is-active', on);
+      if (on) { a.setAttribute('aria-current', 'true'); revealLink(a); } else a.removeAttribute('aria-current');
+    }
+    if (!id && nav.scrollLeft) nav.scrollTo({ left: 0, behavior: REDUCED ? 'auto' : 'smooth' });
   }
-
-  function renderRewards() {
-    const p = W.program;
-    const lede = $('[data-program-lede]');
-    if (lede) lede.textContent = 'Earn beans every time you visit — 1 bean for every MVR ' + num(p.mvrPerBean) + '. Every ' + ordinal(p.stampsForFree) + ' drink is on us.';
-    for (const el of $$('[data-welcome]')) el.textContent = num(p.welcomeBonus);
-    for (const el of $$('[data-earn-rule]')) el.textContent = '1 bean for every MVR ' + num(p.mvrPerBean);
-    for (const el of $$('[data-stamps-ordinal]')) el.textContent = ordinal(p.stampsForFree);
-    const rewards = W.rewards();
-    if (rewards.length) for (const el of $$('[data-min-reward]')) el.textContent = num(rewards[0].cost) + ' beans';
-
-    const tiersEl = $('[data-tiers]');
-    if (tiersEl) {
-      tiersEl.innerHTML = p.tiers.map((t, i) =>
-        '<li class="tier tier--' + esc(t.id) + ' rv" style="--i:' + (i + 1) + '">' +
-          '<h4 class="tier__name">' + esc(t.name) + '</h4>' +
-          '<p class="tier__min">' + (t.min > 0 ? 'From ' + num(t.min) + ' beans earned' : 'From your first visit') + '</p>' +
-          '<ul class="tier__perks" role="list">' + (t.perks || []).map((x) => '<li>' + icon('check') + '<span>' + esc(x) + '</span></li>').join('') + '</ul>' +
-        '</li>').join('');
-    }
-    const listEl = $('[data-rewards-list]');
-    if (listEl) {
-      listEl.innerHTML = rewards.map((r, i) =>
-        '<li class="rlist__item rv" style="--i:' + (i + 1) + '">' +
-          '<span class="rlist__icon">' + icon(r.kind === 'food' ? 'food' : 'cup') + '</span>' +
-          '<span class="rlist__name">' + esc(r.name) + '</span>' +
-          '<span class="rlist__cost num">' + num(r.cost) + ' beans</span>' +
-        '</li>').join('');
-    }
-    if (stampsEl) {
-      renderStampSlots();
-      stampsEl.setAttribute('aria-label', 'Example coffee card: ' + stampTotal + ' stamps, then a free drink');
-    }
-    const card = $('[data-tilt-card]');
-    if (card) card.setAttribute('aria-label', 'Example White Rewards card for a House member with ' + num(p.welcomeBonus) + ' welcome beans');
-  }
-
-  // Coffee card fills one stamp at a time as it scrolls through the viewport.
-  if (stampsEl && !REDUCED) {
-    let top = 0, h = 0;
+  if (menuBook && GROUPS.length) {
+    let marks = [], bookBottom = 0, barH = 0;
     tasks.push({
-      measure() { top = docTop(stampsEl); h = stampsEl.offsetHeight; },
-      update(y, vh) {
-        if (!stampTotal) return false;
-        const start = top - vh * 0.86, end = top + h * 0.5 - vh * 0.42;
-        const p = clamp((y - start) / Math.max(1, end - start), 0, 1);
-        applyStamps(Math.round(p * stampTotal));
+      measure() {
+        barH = mbar ? mbar.offsetHeight : 0;
+        bookBottom = docTop(menuBook) + menuBook.offsetHeight;
+        marks = [];
+        const panel = $('[data-menu-panel="' + activeGroup + '"]');
+        if (!panel) return;
+        const sy = window.scrollY;
+        for (const spread of $$('.spread', panel)) {
+          const cats = $$('.mcat', spread);
+          const cols = $('.spread__cols', spread);
+          // in a two-column text spread the second column starts level with the first: place each category's mark
+          // at its share of the reading order (column one top to bottom, then column two), weighted by its height
+          const columned = cols && cats.length > 1 && parseInt(getComputedStyle(cols).columnCount, 10) > 1;
+          const sTop = spread.getBoundingClientRect().top + sy, sH = spread.offsetHeight;
+          const hs = cats.map((el) => el.offsetHeight), total = hs.reduce((a, b) => a + b, 0) || 1;
+          let acc = 0;
+          cats.forEach((el, i) => { marks.push({ id: el.dataset.cat, top: columned ? sTop + (sH * acc) / total : el.getBoundingClientRect().top + sy }); acc += hs[i]; });
+        }
+      },
+      update(y) {
+        if (!marks.length) return false;
+        if (spyHold) { setSpy(spyHold); return false; }
+        const line = y + (headerHidden ? 0 : headerH) + barH + 56;
+        let cur = null;
+        if (y < bookBottom) for (const m of marks) if (m.top <= line) cur = m.id;
+        setSpy(cur);
         return false;
       }
     });
+    // a clicked category stays lit until the visitor scrolls by hand
+    menuBook.addEventListener('click', (e) => {
+      const a = e.target instanceof Element ? e.target.closest('[data-cat-link]') : null;
+      if (a) { spyHold = a.dataset.catLink; setSpy(spyHold); }
+    });
+    const release = (e) => {
+      if (!spyHold) return;
+      const t = e && e.target instanceof Element ? e.target : null;
+      if (t && t.closest('[data-cat-link]') && (e.type === 'pointerdown' || e.key === 'Enter' || e.key === ' ')) return;
+      spyHold = null; kick();
+    };
+    for (const ev of ['wheel', 'touchstart', 'keydown', 'pointerdown']) window.addEventListener(ev, release, { passive: true });
+  }
+  /** #cat-xyz deep links open the right tab first. */
+  function openHash(smooth) {
+    const id = decodeURIComponent((location.hash || '').slice(1));
+    if (!id || id.indexOf('cat-') !== 0 || !W) return;
+    const c = W.categories().filter((x) => 'cat-' + x.id === id)[0];
+    if (!c) return;
+    if (groupOf(c) !== activeGroup) selectGroup(groupOf(c));
+    const el = document.getElementById(id);
+    if (el) requestAnimationFrame(() => { el.scrollIntoView({ behavior: smooth && !REDUCED ? 'smooth' : 'auto' }); spyHold = c.id; setSpy(c.id); });
+  }
+  window.addEventListener('hashchange', () => openHash(true));
+
+  /* ---------------- karaoke rooms ---------------- */
+  function roomHTML(r, today) {
+    let tonight = '';
+    try {
+      const slots = W.karaokeSlots(today, r.id);
+      const free = slots.filter((s) => s.free);
+      tonight = free.length ? 'Next free tonight: ' + free[0].label
+        : slots.every((s) => s.past) ? 'Free again tomorrow from ' + (slots[0] ? slots[0].label : '4 PM')
+        : 'Fully booked tonight';
+    } catch (e) { tonight = ''; }
+    const short = r.name.replace(/\s+room$/i, '');
+    return '<li class="room rv">' +
+      '<div class="room__head"><h3 class="room__name">' + esc(r.name) + '</h3>' +
+        '<p class="room__rate"><span class="visually-hidden">MVR </span><span class="room__num">' + esc(num(r.rate)) + '</span> an hour</p></div>' +
+      '<p class="room__meta"><span>Up to ' + esc(num(r.capacity)) + ' people</span>' + (tonight ? '<span class="room__tonight">' + esc(tonight) + '</span>' : '') + '</p>' +
+      (r.blurb ? '<p class="room__blurb">' + esc(r.blurb) + '</p>' : '') +
+      '<a class="room__book" href="karaoke/?room=' + encodeURIComponent(r.id) + '#book">Book the ' + esc(short) + ' room</a>' +
+      '</li>';
+  }
+  function renderKaraoke() {
+    const list = $('[data-rooms]');
+    if (!list || typeof W.karaokeRooms !== 'function') return;
+    const rooms = W.karaokeRooms();
+    const today = W.karaokeToday();
+    const html = rooms.map((r) => roomHTML(r, today)).join('');
+    if (list.dataset.sig !== html) { list.dataset.sig = html; list.innerHTML = html; }
+    for (const el of $$('[data-room-count]')) el.textContent = NUM_WORDS[rooms.length] || String(rooms.length);
   }
 
-  /* ---------------- membership card tilt ---------------- */
-  const card = $('[data-tilt-card]');
-  if (card && !REDUCED) {
-    const inner = $('[data-tilt-inner]', card);
-    const sheen = $('[data-sheen]', card);
-    const zone = card.closest('.rw-card__visual') || card;
-    const MAX = 8;
-    let tx = 0, ty = 0, rx = 0, ry = 0, tmx = 32, tmy = 18, mx = 32, my = 18, written = '';
-    let dragging = false;
+  /* ---------------- White Rewards ---------------- */
+  function renderRewards() {
+    const p = W.program;
+    const lede = $('[data-program-lede]');
+    if (lede) lede.textContent = 'Join free with your phone number and we add ' + num(p.welcomeBonus) + ' beans to your card. You earn 1 bean for every MVR ' + num(p.mvrPerBean) +
+      ' you spend, every ' + ordinal(p.stampsForFree) + ' drink is on us, and there are ' + num(p.birthdayBonus) + ' beans waiting on your birthday.';
 
-    const aim = (cx, cy) => {
-      const r = card.getBoundingClientRect();
-      const nx = clamp(((cx - r.left) / r.width) * 2 - 1, -1.2, 1.2);
-      const ny = clamp(((cy - r.top) / r.height) * 2 - 1, -1.2, 1.2);
-      tx = clamp(-ny * MAX, -MAX, MAX);     // the side under the pointer dips away
-      ty = clamp(nx * MAX, -MAX, MAX);
-      tmx = clamp((nx + 1) * 50, -10, 110);
-      tmy = clamp((ny + 1) * 50, -10, 110);
-      kick();
-    };
-    const rest = () => { tx = 0; ty = 0; tmx = 32; tmy = 18; kick(); };
-
-    if (FINE) {
-      zone.addEventListener('pointermove', (e) => { if (e.pointerType === 'mouse' || e.pointerType === 'pen') aim(e.clientX, e.clientY); });
-      zone.addEventListener('pointerleave', rest);
+    const tiersEl = $('[data-tiers]');
+    if (tiersEl) {
+      const head = $('thead tr', tiersEl.parentElement);
+      if (head) head.innerHTML = '<th scope="col">Tier</th><th scope="col">Unlocks at</th><th scope="col">Beans per MVR ' + esc(num(p.mvrPerBean)) + '</th>';
+      tiersEl.innerHTML = p.tiers.map((t) => {
+        const perk = (t.perks || []).filter((x) => !/bean/i.test(x))[0] || '';
+        return '<tr><th scope="row"><span class="tiers__name">' + esc(t.name) + '</span>' + (perk ? '<span class="tiers__perk">' + esc(perk) + '</span>' : '') + '</th>' +
+          '<td>' + (t.min > 0 ? esc(num(t.min)) + ' beans earned' : 'Joining') + '</td>' +
+          '<td>' + esc(num(t.mult || 1)) + '</td></tr>';
+      }).join('');
     }
-    // touch: drag across the card to tilt it (vertical swipes still scroll the page)
-    card.addEventListener('pointerdown', (e) => { if (e.pointerType === 'touch') { dragging = true; aim(e.clientX, e.clientY); } });
-    card.addEventListener('pointermove', (e) => { if (dragging && e.pointerType === 'touch') aim(e.clientX, e.clientY); });
-    const end = () => { if (dragging) { dragging = false; rest(); } };
-    card.addEventListener('pointerup', end);
-    card.addEventListener('pointercancel', end);
-    card.addEventListener('pointerleave', (e) => { if (e.pointerType === 'touch') end(); });
 
-    tasks.push({
-      update(y, vh, dt) {
-        const k = 1 - Math.exp(-dt * 9);
-        rx += (tx - rx) * k; ry += (ty - ry) * k; mx += (tmx - mx) * k; my += (tmy - my) * k;
-        const moving = Math.abs(tx - rx) > 0.01 || Math.abs(ty - ry) > 0.01 || Math.abs(tmx - mx) > 0.05 || Math.abs(tmy - my) > 0.05;
-        if (!moving) { rx = tx; ry = ty; mx = tmx; my = tmy; }
-        const tf = 'rotateX(' + rx.toFixed(2) + 'deg) rotateY(' + ry.toFixed(2) + 'deg)';
-        if (tf !== written) {
-          written = tf;
-          inner.style.transform = (rx === 0 && ry === 0) ? '' : tf;
-          if (sheen) { sheen.style.setProperty('--mx', mx.toFixed(1) + '%'); sheen.style.setProperty('--my', my.toFixed(1) + '%'); }
-        }
-        return moving;
-      }
-    });
+    const listEl = $('[data-rewards-list]');
+    if (listEl) {
+      const PICK = ['r-cookies', 'r-hot', 'r-special', 'r-karaoke'];
+      let list = PICK.map((id) => W.reward(id)).filter((r) => r && r.active);
+      if (list.length < 3) list = W.rewards().slice(0, 4);
+      if (!list.some((r) => r.kind === 'karaoke')) { const k = W.rewards().filter((r) => r.kind === 'karaoke')[0]; if (k) list = list.slice(0, 3).concat(k); }
+      listEl.innerHTML = list.map((r) =>
+        '<li class="rlist__item"><span class="rlist__name">' + esc(r.name) + '</span>' +
+        '<span class="rlist__cost">' + esc(num(r.cost)) + '<span class="rlist__unit">beans</span></span></li>').join('');
+    }
   }
 
   /* ---------------- render all + stay live ---------------- */
   function renderAll() {
     safe(renderMenu);
-    safe(renderFavs);
+    safe(renderSpecials);
+    safe(renderKaraoke);
     safe(renderRewards);
     scheduleMeasure();
   }
@@ -526,11 +615,14 @@
     renderAll();
     safe(renderStatus);
     safe(() => renderHours(true));
+    if (tabs.length) selectGroup(activeGroup);
     W.subscribe(renderAll);               // admin edits in another tab arrive here live
-    const minute = () => { safe(renderStatus); safe(() => renderHours(false)); };
+    const minute = () => { safe(renderStatus); safe(() => renderHours(false)); safe(renderKaraoke); };
     setTimeout(() => { minute(); setInterval(minute, 60e3); }, 60e3 - (Date.now() % 60e3) + 250);
     document.addEventListener('visibilitychange', () => { if (!document.hidden) minute(); });
   }
+  observeReveals(document);
+  if (W) safe(() => openHash(false));
 
   /* ---------------- bean emblem (separate module) ---------------- */
   const beansEl = $('[data-beans]');

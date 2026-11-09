@@ -13,7 +13,7 @@
   'use strict';
 
   var KEY = 'wch.v1';
-  var VERSION = 3;
+  var VERSION = 4;
   var DAY = 864e5;
 
   /* ------------------------------------------------------------------ */
@@ -34,6 +34,7 @@
     tiktok: 'https://www.tiktok.com/@whitecoffeehouse.mv',
     tiktokHandle: '@whitecoffeehouse.mv',
     hoursNote: 'Soft opening',
+    priceNote: 'All prices in MVR, subject to 10% service charge and 8% GST.',
     // Every day, 16:00 – 24:00 Malé time (UTC+5). Days: 0 = Sunday.
     hours: [0, 1, 2, 3, 4, 5, 6].map(function (d) { return { day: d, open: '16:00', close: '24:00' }; }),
     utcOffsetMinutes: 300
@@ -43,49 +44,104 @@
   /* Menu (all prices are placeholders until the client sends theirs)    */
   /* ------------------------------------------------------------------ */
   var MENU_CATEGORIES = [
-    { id: 'coffee', name: 'Coffee', blurb: 'Espresso drinks, pulled to order.' },
-    { id: 'cold', name: 'Iced & cold', blurb: 'For Hulhumalé afternoons.' },
-    { id: 'notcoffee', name: 'Not coffee', blurb: 'Matcha, chocolate, chai and fresh coolers.' },
-    { id: 'food', name: 'Food', blurb: 'Bagels, toasts and plates, served until close.' },
-    { id: 'sweets', name: 'Sweets', blurb: 'Baked every afternoon.' }
+    { id: 'breakfast', name: 'Breakfast', group: 'food', photo: 'breakfast-spread' },
+    { id: 'soups', name: 'Soups', group: 'food', photo: 'breakfast-spread' },
+    { id: 'mains', name: 'Main dishes', group: 'food' },
+    { id: 'specials', name: 'House specials', group: 'food', photo: 'fried-noodles-rice' },
+    { id: 'pizza', name: 'Pizza', group: 'food' },
+    { id: 'sandwiches', name: 'Sandwiches & bites', group: 'food', photo: 'wraps-sandwiches' },
+    { id: 'salads', name: 'Salads', group: 'food', photo: 'fries-rings-salad' },
+    { id: 'sides', name: 'Sides', group: 'food', photo: 'fries-rings-salad' },
+    { id: 'desserts', name: 'Desserts', group: 'food', photo: 'cookies-brownie' },
+    { id: 'hot', name: 'Hot drinks', group: 'drinks' },
+    { id: 'cold', name: 'Cold drinks', group: 'drinks' },
+    { id: 'juice', name: 'Fresh juice', group: 'drinks', photo: 'milkshake-juice' },
+    { id: 'shakes', name: 'Milkshakes', group: 'drinks', photo: 'milkshake-juice' },
+    { id: 'soft', name: 'Soft drinks', group: 'drinks' }
   ];
 
+  // From the client's printed menu (Menu 2.2, Oct 2026). Prices in MVR, before 10% service charge + 8% GST.
   var MENU = [
-    // Coffee
-    { id: 'espresso', cat: 'coffee', name: 'Espresso', desc: 'A short, syrupy double shot.', price: 35 },
-    { id: 'americano', cat: 'coffee', name: 'Americano', desc: 'Double shot, hot water, clean finish.', price: 45 },
-    { id: 'cappuccino', cat: 'coffee', name: 'Cappuccino', desc: 'Equal parts espresso, milk and foam.', price: 55 },
-    { id: 'latte', cat: 'coffee', name: 'Café latte', desc: 'Silky steamed milk over a double shot.', price: 60 },
-    { id: 'flatwhite', cat: 'coffee', name: 'Flat white', desc: 'Less milk, more coffee, fine microfoam.', price: 60 },
-    { id: 'spanish', cat: 'coffee', name: 'Spanish latte', desc: 'Condensed milk sweetness, slow-poured.', price: 70 },
-    { id: 'whitelatte', cat: 'coffee', name: 'The White Latte', desc: 'House signature: white chocolate, vanilla bean, double shot.', price: 75, signature: true },
-    { id: 'pistachio', cat: 'coffee', name: 'Pistachio latte', desc: 'Roasted pistachio cream and espresso.', price: 80 },
-    // Iced & cold
-    { id: 'icedlatte', cat: 'cold', name: 'Iced latte', desc: 'Double shot over cold milk and ice.', price: 65 },
-    { id: 'icedspanish', cat: 'cold', name: 'Iced Spanish latte', desc: 'Our most-ordered cold coffee.', price: 75, signature: true },
-    { id: 'coldbrew', cat: 'cold', name: 'Cold brew', desc: 'Steeped for 18 hours. Smooth and bright.', price: 60 },
-    { id: 'icedmatcha', cat: 'cold', name: 'Iced matcha latte', desc: 'Ceremonial-grade matcha, milk, ice.', price: 75 },
-    { id: 'affogato', cat: 'cold', name: 'Affogato', desc: 'Vanilla gelato drowned in espresso.', price: 70 },
-    // Not coffee
-    { id: 'matcha', cat: 'notcoffee', name: 'Matcha latte', desc: 'Whisked to order, lightly sweet.', price: 70 },
-    { id: 'chocolate', cat: 'notcoffee', name: 'Hot chocolate', desc: 'Dark chocolate melted into steamed milk.', price: 60 },
-    { id: 'chai', cat: 'notcoffee', name: 'Chai latte', desc: 'Warm spice, black tea, steamed milk.', price: 65 },
-    { id: 'minlime', cat: 'notcoffee', name: 'Mint lime cooler', desc: 'Fresh lime, mint, soda, crushed ice.', price: 50 },
-    { id: 'juice', cat: 'notcoffee', name: 'Fresh juice', desc: 'Watermelon, pineapple or orange.', price: 55 },
-    // Food
-    { id: 'salmonbagel', cat: 'food', name: 'Smoked salmon bagel', desc: 'Cream cheese, capers, red onion, dill.', price: 125, signature: true },
-    { id: 'chickenbagel', cat: 'food', name: 'Chicken pesto bagel', desc: 'Grilled chicken, basil pesto, rocket, tomato.', price: 110 },
-    { id: 'eggbagel', cat: 'food', name: 'Egg & cheese bagel', desc: 'Soft scrambled eggs, cheddar, chives.', price: 85 },
-    { id: 'avotoast', cat: 'food', name: 'Avocado toast', desc: 'Sourdough, smashed avocado, poached egg, chilli.', price: 115 },
-    { id: 'benedict', cat: 'food', name: 'Eggs Benedict', desc: 'Poached eggs, hollandaise, toasted muffin.', price: 125 },
-    { id: 'noodles', cat: 'food', name: 'Wok-fried noodles', desc: 'Egg noodles, vegetables, chicken, house sambal.', price: 110 },
-    { id: 'club', cat: 'food', name: 'Club sandwich', desc: 'Chicken, egg, lettuce, tomato, fries on the side.', price: 120 },
-    // Sweets
-    { id: 'croissant', cat: 'sweets', name: 'Butter croissant', desc: 'Flaky, golden, best with a flat white.', price: 45 },
-    { id: 'almondcroissant', cat: 'sweets', name: 'Almond croissant', desc: 'Twice-baked with almond cream.', price: 60 },
-    { id: 'cheesecake', cat: 'sweets', name: 'Basque cheesecake', desc: 'Burnt top, creamy centre.', price: 75, signature: true },
-    { id: 'cinnamon', cat: 'sweets', name: 'Cinnamon roll', desc: 'Brown sugar swirl, cream cheese glaze.', price: 50 },
-    { id: 'cookie', cat: 'sweets', name: 'Chocolate chip cookie', desc: 'Crisp edge, soft middle, sea salt.', price: 35 }
+    { id: 'maldivian-breakfast', cat: 'breakfast', name: 'Maldivian Breakfast', desc: "Kulhimas, mas'huni, choice of egg and roshi or huni-roshi", price: 115, photo: 'breakfast-spread', signature: true },
+    { id: 'english-breakfast', cat: 'breakfast', name: 'English Breakfast', desc: 'Choice of egg, sausage, baked beans, hash browns, toast, butter and jam', price: 112 },
+    { id: 'pancakes-set', cat: 'breakfast', name: 'Pancakes Set', desc: 'Three fluffy pancakes with syrups, butter, sausage and boiled egg', price: 110 },
+    { id: 'waffles-set', cat: 'breakfast', name: 'Waffles Set', desc: 'Crispy waffle with syrups, butter, sausage and boiled egg', price: 110 },
+    { id: 'big-breakfast', cat: 'breakfast', name: 'Grilled Big Breakfast Platter', desc: 'Toasted bread, grilled vegetables, beef bacon, sausages, hash browns, fries and dipping sauces', price: 120, photo: 'breakfast-spread' },
+    { id: 'chicken-mushroom-soup', cat: 'soups', name: 'Chicken and Mushroom Soup', desc: 'Velvety chicken and mushroom soup with toasted croutons, fresh herbs and a swirl of cream', price: 95, photo: 'breakfast-spread' },
+    { id: 'butternut-soup', cat: 'soups', name: 'Butternut Soup', desc: 'Roasted butternut squash blended with herbs and spices, finished with cream and croutons', price: 90 },
+    { id: 'peri-peri-chicken', cat: 'mains', name: 'Peri Peri Chicken with Couscous', desc: 'Fluffy couscous, fresh vegetables, homemade sauce and peri peri chicken', price: 125 },
+    { id: 'thai-green-curry', cat: 'mains', name: 'Thai Green Curry', desc: 'Chicken in a fragrant green curry with vegetables, served with jasmine rice', price: 115 },
+    { id: 'aglio-olio', cat: 'mains', name: 'Spaghetti Aglio e Olio', desc: 'Spaghetti with garlic, olive oil, chilli flakes and herbs, finished with parmesan', price: 99 },
+    { id: 'carbonara', cat: 'mains', name: 'Spaghetti Carbonara', desc: 'Creamy spaghetti with beef bacon, parmesan, egg yolk and black pepper', price: 105 },
+    { id: 'valhoamas-pasta', cat: 'mains', name: 'Cheesy Valhoamas Pasta', desc: 'Creamy pasta with valhoamas and a rich house-made cheese sauce', price: 95 },
+    { id: 'butter-chicken', cat: 'mains', name: 'Butter Chicken', desc: 'Creamy butter chicken with parata, salad and papadum', price: 135 },
+    { id: 'nasi-goreng', cat: 'mains', name: 'Nasi Goreng', desc: 'Wok-fried spiced rice with vegetables and mixed meat, topped with a fried egg', price: 98 },
+    { id: 'special-noodles', cat: 'specials', name: 'White Coffee House Special Fried Noodles', desc: 'With house salad, papadum and chilli. Choice of chicken, beef, tuna or seafood', price: 98, photo: 'fried-noodles-rice', signature: true },
+    { id: 'special-rice', cat: 'specials', name: 'White Coffee House Special Fried Rice', desc: 'Wok-fried rice with Maldivian spices, vegetables and mixed proteins, topped with an omelette', price: 98, photo: 'fried-noodles-rice', signature: true },
+    { id: 'chicken-mushroom-pizza', cat: 'pizza', name: 'Chicken and Mushroom Pizza', desc: '', price: 130 },
+    { id: 'margherita', cat: 'pizza', name: 'Margherita Pizza', desc: '', price: 110 },
+    { id: 'tuna-pizza', cat: 'pizza', name: 'Tuna Pizza', desc: '', price: 120 },
+    { id: 'pepperoni', cat: 'pizza', name: 'Pepperoni Pizza', desc: '', price: 130 },
+    { id: 'tandoori-pizza', cat: 'pizza', name: 'Chicken Tandoori Pizza', desc: '', price: 130 },
+    { id: 'sandwich-platter', cat: 'sandwiches', name: 'Sandwich Platter', desc: 'Triangle sandwiches with creamy chicken or tuna, cheese and vegetables, with dipping sauces and fries', price: 115, photo: 'wraps-sandwiches', signature: true },
+    { id: 'wraps', cat: 'sandwiches', name: 'Wraps', desc: 'Tortilla filled with chicken or beef, fresh vegetables and cheese', price: 95, photo: 'wraps-sandwiches' },
+    { id: 'burger', cat: 'sandwiches', name: 'Burger', desc: 'Grilled chicken or beef burger with spicy fries and coleslaw', price: 115 },
+    { id: 'fish-chips', cat: 'sandwiches', name: 'Fish & Chips', desc: 'Crumb-fried fish with fries, coleslaw and tartar sauce', price: 85 },
+    { id: 'chicken-chips', cat: 'sandwiches', name: 'Chicken & Chips', desc: 'Crumb-fried chicken with fries, coleslaw and tartar sauce', price: 85 },
+    { id: 'caesar-salad', cat: 'salads', name: 'Caesar Salad', desc: 'Iceberg lettuce, garlic croutons, grilled chicken and a creamy dressing', price: 110 },
+    { id: 'chickpea-salad', cat: 'salads', name: 'Mediterranean Chickpea Salad', desc: 'Chickpeas and crisp vegetables with a tangy dressing', price: 110 },
+    { id: 'tuna-egg-salad', cat: 'salads', name: 'Tuna & Egg Salad', desc: 'Fresh tuna, boiled eggs, crisp greens, olives and vinaigrette', price: 100, photo: 'fries-rings-salad' },
+    { id: 'french-fries', cat: 'sides', name: 'French Fries', desc: '', price: 35, photo: 'fries-rings-salad' },
+    { id: 'onion-rings', cat: 'sides', name: 'Onion Rings', desc: '', price: 40, photo: 'fries-rings-salad' },
+    { id: 'mashed-potatoes', cat: 'sides', name: 'Mashed Potatoes', desc: '', price: 45 },
+    { id: 'garden-salad', cat: 'sides', name: 'Garden Salad', desc: '', price: 50 },
+    { id: 'waffles-ice-cream', cat: 'desserts', name: 'Waffles with Ice Cream', desc: '', price: 110 },
+    { id: 'pancakes-ice-cream', cat: 'desserts', name: 'Pancakes with Ice Cream', desc: '', price: 110 },
+    { id: 'brownie', cat: 'desserts', name: 'Chocolate Brownie', desc: '', price: 45, photo: 'cookies-brownie' },
+    { id: 'creme-brulee', cat: 'desserts', name: 'Crème Brûlée', desc: '', price: 50 },
+    { id: 'fruit-platter', cat: 'desserts', name: 'Fresh Fruit Platter', desc: '', price: 50 },
+    { id: 'caramel-pudding', cat: 'desserts', name: 'Caramel Pudding', desc: '', price: 50 },
+    { id: 'cookies', cat: 'desserts', name: 'Chocolate Chip Cookies', desc: '', price: 30, photo: 'cookies-brownie' },
+    { id: 'milk-coffee', cat: 'hot', name: 'Milk Coffee', desc: '', price: 35 },
+    { id: 'black-coffee', cat: 'hot', name: 'Black Coffee', desc: '', price: 38 },
+    { id: 'espresso-single', cat: 'hot', name: 'Espresso Single', desc: '', price: 30 },
+    { id: 'espresso-double', cat: 'hot', name: 'Espresso Double', desc: '', price: 42 },
+    { id: 'americano', cat: 'hot', name: 'Americano', desc: '', price: 45 },
+    { id: 'cappuccino', cat: 'hot', name: 'Cappuccino', desc: '', price: 50 },
+    { id: 'cafe-latte', cat: 'hot', name: 'Café Latte', desc: '', price: 45 },
+    { id: 'hot-chocolate', cat: 'hot', name: 'Hot Chocolate', desc: '', price: 55 },
+    { id: 'milk-tea', cat: 'hot', name: 'Milk Tea', desc: '', price: 35 },
+    { id: 'ginger-honey-lime', cat: 'hot', name: 'Ginger Honey & Lime Tea', desc: '', price: 40 },
+    { id: 'green-tea', cat: 'hot', name: 'Green Tea', desc: '', price: 20 },
+    { id: 'black-tea', cat: 'hot', name: 'Black Tea', desc: '', price: 15 },
+    { id: 'iced-latte', cat: 'cold', name: 'Iced Latte', desc: '', price: 50 },
+    { id: 'iced-milo', cat: 'cold', name: 'Iced Milo', desc: '', price: 55 },
+    { id: 'iced-lemon-tea', cat: 'cold', name: 'Iced Lemon Tea', desc: '', price: 45 },
+    { id: 'iced-coffee', cat: 'cold', name: 'Iced Coffee', desc: '', price: 60 },
+    { id: 'coke-float', cat: 'cold', name: 'Coke Float', desc: '', price: 40 },
+    { id: 'melon-float', cat: 'cold', name: 'Melon Float', desc: '', price: 55 },
+    { id: 'affogato', cat: 'cold', name: 'Affogato', desc: '', price: 80 },
+    { id: 'water', cat: 'cold', name: 'Mineral Water (500 ml)', desc: '', price: 7 },
+    { id: 'watermelon-juice', cat: 'juice', name: 'Watermelon Juice', desc: '', price: 65 },
+    { id: 'orange-juice', cat: 'juice', name: 'Orange Juice', desc: '', price: 65 },
+    { id: 'mango-juice', cat: 'juice', name: 'Mango Juice', desc: '', price: 65 },
+    { id: 'pineapple-juice', cat: 'juice', name: 'Pineapple Juice', desc: '', price: 65 },
+    { id: 'passionfruit-juice', cat: 'juice', name: 'Passionfruit Juice', desc: '', price: 65, photo: 'milkshake-juice' },
+    { id: 'lime-juice', cat: 'juice', name: 'Lime Juice', desc: '', price: 65 },
+    { id: 'mixed-juice', cat: 'juice', name: 'Mixed Juice', desc: '', price: 65 },
+    { id: 'strawberry-shake', cat: 'shakes', name: 'Strawberry Milkshake', desc: '', price: 75 },
+    { id: 'vanilla-shake', cat: 'shakes', name: 'Vanilla Milkshake', desc: '', price: 75 },
+    { id: 'chocolate-shake', cat: 'shakes', name: 'Chocolate Milkshake', desc: '', price: 75, photo: 'milkshake-juice' },
+    { id: 'oreo-shake', cat: 'shakes', name: 'Oreo Milkshake', desc: '', price: 75 },
+    { id: 'avocado-shake', cat: 'shakes', name: 'Avocado Milkshake', desc: '', price: 75 },
+    { id: 'coke', cat: 'soft', name: 'Coke', desc: '', price: 28 },
+    { id: 'diet-coke', cat: 'soft', name: 'Diet Coke', desc: '', price: 28 },
+    { id: 'sprite', cat: 'soft', name: 'Sprite', desc: '', price: 28 },
+    { id: 'fanta', cat: 'soft', name: 'Fanta', desc: '', price: 28 },
+    { id: 'soda-water', cat: 'soft', name: 'Soda Water', desc: '', price: 28 },
+    { id: 'ginger-beer', cat: 'soft', name: 'Ginger Beer', desc: '', price: 56 },
+    { id: 'xl-energy', cat: 'soft', name: 'XL Energy Drink', desc: '', price: 58 },
+    { id: 'red-bull', cat: 'soft', name: 'Red Bull', desc: '', price: 60 }
   ];
 
   /* ------------------------------------------------------------------ */
@@ -103,25 +159,41 @@
     tiers: [
       { id: 'house', name: 'House', min: 0, mult: 1, perks: ['1 bean for every MVR 5', 'A free drink on your birthday', 'Member-only offers'] },
       { id: 'gold', name: 'Gold', min: 500, mult: 1.25, perks: ['1.25× beans on everything', 'Free size upgrade, every visit', 'Early taste of new menu items'] },
-      { id: 'white', name: 'White', min: 1200, mult: 1.5, perks: ['1.5× beans on everything', 'One free drink every month', 'Invites to tasting evenings'] }
+      { id: 'white', name: 'White', min: 1000, mult: 1.5, perks: ['1.5× beans on everything', 'One free drink every month', 'Invites to tasting evenings'] }
     ]
   };
 
   var REWARDS = [
-    { id: 'r-espresso', name: 'Espresso or Americano', cost: 100, kind: 'drink', active: true },
-    { id: 'r-pastry', name: 'Croissant or cookie', cost: 120, kind: 'food', active: true },
-    { id: 'r-hot', name: 'Any hot drink', cost: 150, kind: 'drink', active: true },
-    { id: 'r-iced', name: 'Any iced drink', cost: 180, kind: 'drink', active: true },
-    { id: 'r-cake', name: 'Slice of Basque cheesecake', cost: 200, kind: 'food', active: true },
-    { id: 'r-friend', name: 'Two drinks — bring a friend', cost: 280, kind: 'drink', active: true },
-    { id: 'r-brunch', name: 'Any bagel or brunch plate', cost: 400, kind: 'food', active: true }
+    { id: 'r-cookies', name: 'Chocolate chip cookies', cost: 80, kind: 'food', active: true },
+    { id: 'r-hot', name: 'Any hot coffee', cost: 120, kind: 'drink', active: true },
+    { id: 'r-brownie', name: 'Chocolate brownie', cost: 120, kind: 'food', active: true },
+    { id: 'r-iced', name: 'Any iced drink', cost: 150, kind: 'drink', active: true },
+    { id: 'r-juice', name: 'Any fresh juice', cost: 170, kind: 'drink', active: true },
+    { id: 'r-shake', name: 'Any milkshake', cost: 190, kind: 'drink', active: true },
+    { id: 'r-special', name: 'Special fried rice or noodles', cost: 260, kind: 'food', active: true },
+    { id: 'r-karaoke', name: 'One hour in the Cosy karaoke room', cost: 700, kind: 'karaoke', active: true }
   ];
 
   var OFFERS = [
-    { id: 'o-double', title: 'Double beans, 4–6 PM', body: 'Every weekday at opening, every bean counts twice.', active: true },
+    { id: 'o-double', title: 'Double beans from 4 to 6 PM', body: 'On weekdays, every bean you earn in the first two hours counts twice.', active: true },
     { id: 'o-bday', title: 'Birthday on us', body: 'Members get 100 beans and a free drink in their birthday week.', active: true },
-    { id: 'o-friend', title: 'Bring a friend', body: 'Invite a friend to White Rewards — you both get 50 beans after their first visit.', active: true }
+    { id: 'o-friend', title: 'Bring a friend', body: 'Invite a friend to White Rewards. You both get 50 beans after their first visit.', active: true }
   ];
+
+  /* ------------------------------------------------------------------ */
+  /* Karaoke rooms (names, sizes and rates are placeholders)            */
+  /* ------------------------------------------------------------------ */
+  var KARAOKE = {
+    open: 16, close: 24,          // bookable hours, Malé time (last start = close - 1)
+    maxHours: 4,
+    daysAhead: 30,
+    rooms: [
+      { id: 'cosy', name: 'Cosy room', capacity: 6, rate: 300, blurb: 'For birthdays, catch-ups and duets. Sofa seating, one big screen.', active: true },
+      { id: 'party', name: 'Party room', capacity: 12, rate: 500, blurb: 'Room for the whole group, two mics, mood lighting and a proper sound system.', active: true },
+      { id: 'vip', name: 'VIP room', capacity: 20, rate: 800, blurb: 'Our largest room, with a private service bell and the best sound in the house.', active: true }
+    ],
+    statuses: ['confirmed', 'checked-in', 'completed', 'cancelled', 'no-show']
+  };
 
   /* ------------------------------------------------------------------ */
   /* Deterministic demo seed                                             */
@@ -136,34 +208,35 @@
   }
 
   var SEED_MEMBERS = [
-    ['Aisha Ibrahim', '+960 771 2408', 'aisha.ibrahim@example.mv', '03-14', 'Iced Spanish latte'],
-    ['Mohamed Shifaz', '+960 790 1123', 'shifaz@example.mv', '07-02', 'Flat white'],
-    ['Fathimath Zeena', '+960 762 8841', 'zeena.f@example.mv', '11-21', 'The White Latte'],
+    ['Aisha Ibrahim', '+960 771 2408', 'aisha.ibrahim@example.mv', '03-14', 'Iced Coffee'],
+    ['Mohamed Shifaz', '+960 790 1123', 'shifaz@example.mv', '07-02', 'Cappuccino'],
+    ['Fathimath Zeena', '+960 762 8841', 'zeena.f@example.mv', '11-21', 'Café Latte'],
     ['Ahmed Rasheed', '+960 777 3390', 'a.rasheed@example.mv', '01-09', 'Americano'],
-    ['Mariyam Shiuna', '+960 793 5512', 'shiuna@example.mv', '05-30', 'Matcha latte'],
-    ['Hassan Nazeer', '+960 748 2205', 'hnazeer@example.mv', '09-17', 'Cold brew'],
-    ['Aminath Liusha', '+960 765 9034', 'liusha@example.mv', '12-03', 'Pistachio latte'],
-    ['Ibrahim Shareef', '+960 772 6618', 'ishareef@example.mv', '04-25', 'Espresso'],
-    ['Hawwa Nashfa', '+960 799 4470', 'nashfa@example.mv', '08-11', 'Spanish latte'],
+    ['Mariyam Shiuna', '+960 793 5512', 'shiuna@example.mv', '05-30', 'Mango Juice'],
+    ['Hassan Nazeer', '+960 748 2205', 'hnazeer@example.mv', '09-17', 'Iced Latte'],
+    ['Aminath Liusha', '+960 765 9034', 'liusha@example.mv', '12-03', 'Oreo Milkshake'],
+    ['Ibrahim Shareef', '+960 772 6618', 'ishareef@example.mv', '04-25', 'Espresso Double'],
+    ['Hawwa Nashfa', '+960 799 4470', 'nashfa@example.mv', '08-11', 'Iced Milo'],
     ['Ali Waheed', '+960 781 0956', 'ali.waheed@example.mv', '02-27', 'Cappuccino'],
-    ['Zahra Adam', '+960 754 3381', 'zahra.adam@example.mv', '06-19', 'Iced matcha latte'],
-    ['Ismail Hameed', '+960 768 7723', 'ihameed@example.mv', '10-05', 'Café latte'],
-    ['Shaheema Ali', '+960 790 8812', 'shaheema@example.mv', '03-08', 'Chai latte'],
-    ['Yoosuf Naseem', '+960 777 5049', 'ynaseem@example.mv', '11-12', 'Iced latte'],
-    ['Mariyam Hana', '+960 762 1187', 'hana.m@example.mv', '07-23', 'Hot chocolate'],
-    ['Abdulla Zuhair', '+960 795 6630', 'zuhair@example.mv', '01-31', 'Flat white'],
-    ['Aishath Raya', '+960 749 2268', 'raya@example.mv', '09-02', 'The White Latte'],
+    ['Zahra Adam', '+960 754 3381', 'zahra.adam@example.mv', '06-19', 'Passionfruit Juice'],
+    ['Ismail Hameed', '+960 768 7723', 'ihameed@example.mv', '10-05', 'Café Latte'],
+    ['Shaheema Ali', '+960 790 8812', 'shaheema@example.mv', '03-08', 'Ginger Honey & Lime Tea'],
+    ['Yoosuf Naseem', '+960 777 5049', 'ynaseem@example.mv', '11-12', 'Iced Latte'],
+    ['Mariyam Hana', '+960 762 1187', 'hana.m@example.mv', '07-23', 'Hot Chocolate'],
+    ['Abdulla Zuhair', '+960 795 6630', 'zuhair@example.mv', '01-31', 'Cappuccino'],
+    ['Aishath Raya', '+960 749 2268', 'raya@example.mv', '09-02', 'Café Latte'],
     ['Hussain Faisal', '+960 783 4415', 'hfaisal@example.mv', '05-14', 'Americano'],
-    ['Nuha Moosa', '+960 771 9902', 'nuha@example.mv', '12-24', 'Iced Spanish latte'],
-    ['Imran Latheef', '+960 766 3357', 'imran.l@example.mv', '04-04', 'Cold brew'],
-    ['Sara Ahmed', '+960 797 0841', 'sara.ahmed@example.mv', '08-29', 'Pistachio latte'],
-    ['Moosa Fahmy', '+960 758 6624', 'mfahmy@example.mv', '06-06', 'Espresso'],
-    ['Lamya Hassan', '+960 774 1196', 'lamya@example.mv', '02-10', 'Matcha latte'],
+    ['Nuha Moosa', '+960 771 9902', 'nuha@example.mv', '12-24', 'Iced Coffee'],
+    ['Imran Latheef', '+960 766 3357', 'imran.l@example.mv', '04-04', 'Iced Latte'],
+    ['Sara Ahmed', '+960 797 0841', 'sara.ahmed@example.mv', '08-29', 'Oreo Milkshake'],
+    ['Moosa Fahmy', '+960 758 6624', 'mfahmy@example.mv', '06-06', 'Espresso Double'],
+    ['Lamya Hassan', '+960 774 1196', 'lamya@example.mv', '02-10', 'Mango Juice'],
     ['Riyaz Mohamed', '+960 789 5573', 'riyaz@example.mv', '10-28', 'Cappuccino']
   ];
   var STAFF = ['Shazna', 'Ameen', 'Rifa', 'Nadheem'];
-  var DRINK_IDS = MENU.filter(function (m) { return m.cat !== 'food' && m.cat !== 'sweets'; }).map(function (m) { return m.id; });
-  var FOOD_IDS = MENU.filter(function (m) { return m.cat === 'food' || m.cat === 'sweets'; }).map(function (m) { return m.id; });
+  function groupOf(cat) { for (var i = 0; i < MENU_CATEGORIES.length; i++) if (MENU_CATEGORIES[i].id === cat) return MENU_CATEGORIES[i].group; return 'food'; }
+  var DRINK_IDS = MENU.filter(function (m) { return groupOf(m.cat) === 'drinks' && m.cat !== 'soft' && m.id !== 'water'; }).map(function (m) { return m.id; });
+  var FOOD_IDS = MENU.filter(function (m) { return groupOf(m.cat) === 'food'; }).map(function (m) { return m.id; });
 
   function menuById(id) { for (var i = 0; i < MENU.length; i++) if (MENU[i].id === id) return MENU[i]; return null; }
 
@@ -178,6 +251,7 @@
       menu: MENU.map(function (m) { var c = clone(m); c.available = true; return c; }),
       rewards: clone(REWARDS),
       offers: clone(OFFERS),
+      karaoke: { rooms: clone(KARAOKE.rooms), bookings: [], nextBookingNo: 2101 },
       members: [],
       activity: [],
       redemptions: [],
@@ -205,7 +279,7 @@
             m.freeDrinks -= 1;
             pushActivity(doc, { type: 'free', memberId: m.id, beans: 0, note: 'Free drink from coffee card', staff: STAFF[Math.floor(rnd() * STAFF.length)] }, ts + 3e4);
           }
-          if (m.beans >= 150 && rnd() < (i === 0 ? 0.16 : 0.12)) {
+          if (m.beans >= 150 && rnd() < (i === 0 ? 0.05 : 0.12)) {
             var affordable = doc.rewards.filter(function (r) { return r.cost <= m.beans; });
             var r = affordable[Math.floor(rnd() * affordable.length)];
             var red = redeemInto(doc, m, r, ts + 6e4);
@@ -219,6 +293,7 @@
     if (demo.stamps < 6) demo.stamps = 6;
     doc.activity.sort(function (a, b) { return b.ts - a.ts; });
     doc.redemptions.sort(function (a, b) { return b.ts - a.ts; });
+    seedKaraoke(doc, now, rnd);
     return doc;
   }
 
@@ -281,7 +356,7 @@
       type: 'earn', memberId: m.id, amount: amount, beans: beans, stamps: drinks,
       items: p.items || [], note: p.note || '', staff: p.staff || 'Counter', tier: tier.id, multiplier: multiplier
     }, ts);
-    if (freeEarned) pushActivity(doc, { type: 'stamp', memberId: m.id, beans: 0, note: freeEarned === 1 ? 'Coffee card full — a free drink is waiting' : freeEarned + ' free drinks unlocked' }, ts + 500);
+    if (freeEarned) pushActivity(doc, { type: 'stamp', memberId: m.id, beans: 0, note: freeEarned === 1 ? 'Coffee card full, a free drink is waiting' : freeEarned + ' free drinks unlocked' }, ts + 500);
     return a;
   }
 
@@ -303,6 +378,50 @@
     var rnd = mulberry32(x);
     for (var i = 0; i < 4; i++) s += alphabet[Math.floor(rnd() * alphabet.length)];
     return 'W-' + s;
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Karaoke helpers                                                     */
+  /* ------------------------------------------------------------------ */
+  function maleDateKey(ts) { var p = maleParts(ts); return p.y + '-' + String(p.mo + 1).padStart(2, '0') + '-' + String(p.d).padStart(2, '0'); }
+  function dateKeyToTs(key, hour) {   // Malé wall-clock -> UTC ms
+    var a = key.split('-'); return Date.UTC(+a[0], +a[1] - 1, +a[2], hour || 0) - INFO.utcOffsetMinutes * 6e4;
+  }
+  function roomOf(doc, id) { return doc.karaoke.rooms.filter(function (r) { return r.id === id; })[0] || null; }
+  function overlaps(b, roomId, date, start, hours) {
+    return b.roomId === roomId && b.date === date && b.status !== 'cancelled' && b.status !== 'no-show' &&
+      start < b.start + b.hours && b.start < start + hours;
+  }
+  function makeBooking(doc, p, ts) {
+    var room = roomOf(doc, p.roomId);
+    var b = {
+      id: 'K-' + doc.karaoke.nextBookingNo++, roomId: room.id, roomName: room.name, date: p.date, start: p.start, hours: p.hours,
+      guests: p.guests, name: p.name, phone: p.phone, email: p.email || '', notes: p.notes || '', memberId: p.memberId || null,
+      rate: room.rate, total: room.rate * p.hours, status: p.status || 'confirmed', source: p.source || 'Online', createdAt: ts
+    };
+    doc.karaoke.bookings.push(b);
+    return b;
+  }
+  function seedKaraoke(doc, now, rnd) {
+    var names = SEED_MEMBERS.map(function (r) { return r; });
+    var today = maleDateKey(now);
+    for (var d = -10; d <= 12; d++) {
+      var key = maleDateKey(dateKeyToTs(today, 12) + d * DAY);
+      var n = 1 + Math.floor(rnd() * (d >= 0 && d < 3 ? 4 : 3));
+      for (var k = 0; k < n; k++) {
+        var room = doc.karaoke.rooms[Math.floor(rnd() * 3)];
+        var hours = 1 + Math.floor(rnd() * 3), start = KARAOKE.open + Math.floor(rnd() * (KARAOKE.close - KARAOKE.open - hours + 1));
+        var clash = doc.karaoke.bookings.some(function (b) { return overlaps(b, room.id, key, start, hours); });
+        if (clash) continue;
+        var who = names[Math.floor(rnd() * names.length)], mi = SEED_MEMBERS.indexOf(who);
+        var member = doc.members[mi];
+        var startTs = dateKeyToTs(key, start), endTs = startTs + hours * 36e5;
+        var status = endTs < now ? (rnd() < 0.9 ? 'completed' : 'no-show') : (startTs < now ? 'checked-in' : 'confirmed');
+        var b = makeBooking(doc, { roomId: room.id, date: key, start: start, hours: hours, guests: Math.max(2, Math.floor(room.capacity * (0.4 + rnd() * 0.6))),
+          name: who[0], phone: who[1], email: who[2], memberId: rnd() < 0.7 ? member.id : null, status: status, source: rnd() < 0.75 ? 'Online' : 'Phone' }, startTs - (2 + rnd() * 5) * DAY);
+        if (rnd() < 0.15) b.notes = 'Birthday, please add candles';
+      }
+    }
   }
 
   function pushActivity(doc, a, ts) {
@@ -347,7 +466,13 @@
   });
   function expireRedemptions() {
     var now = Date.now(), changed = false;
-    doc.redemptions.forEach(function (r) { if (r.status === 'ready' && r.expires < now) { r.status = 'expired'; changed = true; } });
+    doc.redemptions.forEach(function (r) {
+      if (r.status === 'ready' && r.expires < now) {
+        r.status = 'expired'; changed = true;
+        var m = doc.members.filter(function (x) { return x.id === r.memberId; })[0];
+        if (m && !r.refunded) { m.beans += r.cost; r.refunded = true; pushActivity(doc, { type: 'refund', memberId: m.id, beans: r.cost, note: r.rewardName + ' code expired, beans returned', code: r.code }, r.expires); }
+      }
+    });
     if (changed) write();
   }
 
@@ -532,7 +657,7 @@
     cancelRedemption: function (code) {
       var r = WCH.redemption(code); if (!r || r.status !== 'ready') throw new Error('Only a ready code can be cancelled');
       var m = WCH.member(r.memberId); r.status = 'cancelled'; if (m) m.beans += r.cost;
-      pushActivity(doc, { type: 'refund', memberId: r.memberId, beans: r.cost, note: r.rewardName + ' cancelled — beans returned', code: r.code }, Date.now());
+      pushActivity(doc, { type: 'refund', memberId: r.memberId, beans: r.cost, note: r.rewardName + ' cancelled, beans returned', code: r.code }, Date.now());
       commit('cancel'); return r;
     },
 
@@ -605,6 +730,119 @@
     signInStaff: function (name) { doc.session.staff = String(name || 'Manager'); commit('session'); },
     signOutStaff: function () { doc.session.staff = null; commit('session'); },
     currentStaff: function () { return doc.session.staff; },
+
+    // Karaoke
+    karaokeRules: function () { return { open: KARAOKE.open, close: KARAOKE.close, maxHours: KARAOKE.maxHours, daysAhead: KARAOKE.daysAhead, statuses: KARAOKE.statuses.slice() }; },
+    karaokeRooms: function (all) { return doc.karaoke.rooms.filter(function (r) { return all || r.active; }); },
+    karaokeRoom: function (id) { return roomOf(doc, id); },
+    /** Admin: change a room's name, capacity, hourly rate, blurb or active flag. */
+    saveKaraokeRoom: function (id, patch) {
+      var r = roomOf(doc, id); if (!r) throw new Error('Unknown room');
+      if ('rate' in patch) { var v = Math.round(Number(patch.rate)); if (!(v > 0)) throw new Error('Rate must be more than 0'); r.rate = v; }
+      if ('capacity' in patch) { var c = Math.round(Number(patch.capacity)); if (!(c >= 1)) throw new Error('Capacity must be at least 1'); r.capacity = c; }
+      if ('name' in patch && String(patch.name).trim()) r.name = String(patch.name).trim();
+      if ('blurb' in patch) r.blurb = String(patch.blurb);
+      if ('active' in patch) r.active = !!patch.active;
+      commit('karaoke-room'); return r;
+    },
+    /** Today's date key in Malé (YYYY-MM-DD) and helpers to move between days. */
+    karaokeToday: function () { return maleDateKey(Date.now()); },
+    karaokeAddDays: function (key, n) { return maleDateKey(dateKeyToTs(key, 12) + n * DAY); },
+    karaokeDateLabel: function (key) { var ts = dateKeyToTs(key, 12), p = maleParts(ts); return ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][p.day] + ' ' + p.d + ' ' + MONTHS[p.mo]; },
+    /** Availability for one room on one date: [{hour, label, free, past, bookingId}] for every bookable start hour. */
+    karaokeSlots: function (date, roomId) {
+      var out = [], now = Date.now();
+      for (var h = KARAOKE.open; h < KARAOKE.close; h++) {
+        var hit = doc.karaoke.bookings.filter(function (b) { return overlaps(b, roomId, date, h, 1); })[0];
+        var past = dateKeyToTs(date, h) < now;
+        out.push({ hour: h, label: fmtClock(String(h).padStart(2, '0') + ':00'), free: !hit && !past, past: past, bookingId: hit ? hit.id : null });
+      }
+      return out;
+    },
+    /** Longest booking (hours) that fits from this start without a clash or running past close. */
+    karaokeMaxHours: function (date, roomId, start) {
+      var n = 0;
+      for (var h = start; h < KARAOKE.close && n < KARAOKE.maxHours; h++) {
+        if (doc.karaoke.bookings.some(function (b) { return overlaps(b, roomId, date, h, 1); })) break;
+        n++;
+      }
+      return n;
+    },
+    /** Create a booking: { roomId, date 'YYYY-MM-DD', start (hour 16-23), hours, guests, name, phone, email, notes, memberId, source, status } */
+    bookKaraoke: function (p) {
+      var fresh = read(); if (fresh) doc = fresh;   // re-read so a booking made in another tab a moment ago counts
+      var room = roomOf(doc, p.roomId); if (!room || !room.active) throw new Error('Please choose a room');
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(String(p.date || ''))) throw new Error('Please choose a date');
+      var start = Math.round(Number(p.start)), hours = Math.round(Number(p.hours)), guests = Math.round(Number(p.guests));
+      if (!(start >= KARAOKE.open && start < KARAOKE.close)) throw new Error('Please choose a start time');
+      if (!(hours >= 1 && hours <= KARAOKE.maxHours)) throw new Error('Bookings are 1 to ' + KARAOKE.maxHours + ' hours');
+      if (start + hours > KARAOKE.close) throw new Error('The room has to be free by midnight');
+      if (!(guests >= 1)) throw new Error('How many people are coming?');
+      if (guests > room.capacity) throw new Error('The ' + room.name + ' fits up to ' + room.capacity + ' people');
+      var today = maleDateKey(Date.now()), last = maleDateKey(Date.now() + KARAOKE.daysAhead * DAY);
+      if (p.date < today) throw new Error('That date has passed');
+      if (p.date > last) throw new Error('You can book up to ' + KARAOKE.daysAhead + ' days ahead');
+      if (dateKeyToTs(p.date, start) < Date.now() && p.source !== 'Walk-in') throw new Error('That time has already started');
+      if (!String(p.name || '').trim()) throw new Error('Please enter your name');
+      if (String(p.phone || '').replace(/\D/g, '').length < 7) throw new Error('Please enter a phone number we can call');
+      if (doc.karaoke.bookings.some(function (b) { return overlaps(b, room.id, p.date, start, hours); })) throw new Error('Someone just booked that time. Please pick another slot.');
+      var b = makeBooking(doc, { roomId: room.id, date: p.date, start: start, hours: hours, guests: guests, name: String(p.name).trim(), phone: String(p.phone).trim(),
+        email: String(p.email || '').trim(), notes: String(p.notes || '').trim(), memberId: p.memberId || null, source: p.source || 'Online', status: p.status || 'confirmed' }, Date.now());
+      if (b.memberId) pushActivity(doc, { type: 'booking', memberId: b.memberId, beans: 0, note: 'Karaoke booked: ' + b.roomName + ', ' + WCH.karaokeDateLabel(b.date) + ' at ' + fmtClock(String(b.start).padStart(2, '0') + ':00'), code: b.id }, Date.now());
+      commit('karaoke-book'); return b;
+    },
+    karaokeBooking: function (id) { id = String(id || '').trim().toUpperCase(); if (id && id.indexOf('K-') !== 0) id = 'K-' + id; return doc.karaoke.bookings.filter(function (b) { return b.id === id; })[0] || null; },
+    /** Filter: { date, roomId, status, memberId, phone, from, to } — sorted by date + start. */
+    karaokeBookings: function (f) {
+      f = f || {}; var digits = f.phone ? String(f.phone).replace(/\D/g, '') : '';
+      return doc.karaoke.bookings.filter(function (b) {
+        return (!f.date || b.date === f.date) && (!f.roomId || b.roomId === f.roomId) && (!f.status || b.status === f.status) &&
+          (!f.memberId || b.memberId === f.memberId) && (!digits || b.phone.replace(/\D/g, '').slice(-7) === digits.slice(-7)) &&
+          (!f.from || b.date >= f.from) && (!f.to || b.date <= f.to);
+      }).sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : a.start - b.start; });
+    },
+    /** Staff: confirmed -> checked-in -> completed, or cancelled / no-show. Completing a member's booking earns beans on the room total. */
+    setKaraokeStatus: function (id, status, staff) {
+      var b = WCH.karaokeBooking(id); if (!b) throw new Error('No booking with that reference');
+      if (KARAOKE.statuses.indexOf(status) < 0) throw new Error('Unknown status');
+      if (b.status === 'completed' && status !== 'completed') throw new Error('This booking is already completed');
+      b.status = status; b.updatedAt = Date.now(); b.updatedBy = staff || 'Counter';
+      if (status === 'completed' && b.memberId && !b.beansAwarded) {
+        var m = WCH.member(b.memberId);
+        if (m) { earnInto(doc, m, { amount: b.total, drinks: 0, items: ['Karaoke: ' + b.roomName + ', ' + b.hours + ' h'], staff: b.updatedBy, note: b.id }, Date.now()); b.beansAwarded = true; }
+      }
+      commit('karaoke-status'); return b;
+    },
+    /** Customer or staff cancels a future booking. */
+    cancelKaraoke: function (id, by) {
+      var b = WCH.karaokeBooking(id); if (!b) throw new Error('No booking with that reference');
+      if (b.status !== 'confirmed') throw new Error('Only upcoming bookings can be cancelled');
+      b.status = 'cancelled'; b.updatedAt = Date.now(); b.updatedBy = by || 'Guest';
+      if (b.memberId) pushActivity(doc, { type: 'booking', memberId: b.memberId, beans: 0, note: 'Karaoke cancelled: ' + b.roomName + ', ' + WCH.karaokeDateLabel(b.date), code: b.id }, Date.now());
+      commit('karaoke-cancel'); return b;
+    },
+    /** Move a booking (staff). */
+    moveKaraoke: function (id, p) {
+      var fresh = read(); if (fresh) doc = fresh;
+      var b = WCH.karaokeBooking(id); if (!b) throw new Error('No booking with that reference');
+      var roomId = p.roomId || b.roomId, date = p.date || b.date, start = p.start != null ? Math.round(Number(p.start)) : b.start, hours = p.hours != null ? Math.round(Number(p.hours)) : b.hours;
+      if (start + hours > KARAOKE.close || start < KARAOKE.open || hours < 1 || hours > KARAOKE.maxHours) throw new Error('That time does not fit');
+      var clash = doc.karaoke.bookings.some(function (x) { return x !== b && overlaps(x, roomId, date, start, hours); });
+      if (clash) throw new Error('That room is taken at that time');
+      var room = roomOf(doc, roomId); b.roomId = roomId; b.roomName = room.name; b.date = date; b.start = start; b.hours = hours; b.rate = room.rate; b.total = room.rate * hours;
+      b.updatedAt = Date.now(); commit('karaoke-move'); return b;
+    },
+    karaokeStats: function () {
+      var today = maleDateKey(Date.now()), weekEnd = maleDateKey(Date.now() + 6 * DAY), s = { today: 0, todayHours: 0, upcomingWeek: 0, revenueWeek: 0, occupancyToday: 0 };
+      var bookable = doc.karaoke.rooms.filter(function (r) { return r.active; }).length * (KARAOKE.close - KARAOKE.open);
+      doc.karaoke.bookings.forEach(function (b) {
+        if (b.status === 'cancelled' || b.status === 'no-show') return;
+        if (b.date === today) { s.today++; s.todayHours += b.hours; }
+        if (b.date >= today && b.date <= weekEnd) { s.upcomingWeek++; s.revenueWeek += b.total; }
+      });
+      s.occupancyToday = bookable ? s.todayHours / bookable : 0;
+      return s;
+    },
 
     // Formatting
     fmt: { mvr: fmtMVR, num: fmtNum, date: fmtDate, shortDate: fmtShortDate, time: fmtTime, dateTime: fmtDateTime, ago: fmtAgo, birthday: fmtBirthday, clock: fmtClock, initials: initials, esc: escapeHTML }
