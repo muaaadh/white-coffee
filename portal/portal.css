@@ -117,6 +117,9 @@ body[data-view="card"] .side { display: block; margin-bottom: 36px; }
 .view > * + * { margin-top: 36px; }
 .view > .vhead + * { margin-top: 28px; }
 .view > .link-back + * { margin-top: 4px; }
+/* Under the side column on phones the card view's first block needs no second 36px gap
+   (on laptops the same 36px lines it up with the top of the card instead). */
+@media (max-width: 899.98px) { .view[data-v="card"] > .visually-hidden:first-child + * { margin-top: 0; } }
 
 /* Entrance: opacity + small rise, children only (never the observed/parent element) */
 .view.is-entering > * { animation: rise .55s var(--ease-out) both; }
@@ -156,11 +159,11 @@ body[data-view="card"] .side { display: block; margin-bottom: 36px; }
 @keyframes grow { from { width: 0; } }
 
 /* ==========================================================================
-   Side column: greeting, card, waiting rewards
+   Side column: open status, card, waiting rewards
    ========================================================================== */
-.side__head { margin-bottom: 18px; }
-.greet { font-family: var(--font-display); font-weight: 400; font-size: 1.875rem; line-height: 1.1; letter-spacing: -0.01em; color: var(--espresso); }
-.open-status { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: var(--fs-sm); color: var(--muted); }
+/* One quiet line about the café above the card (22px + 14px = 36px, the gap the view uses between blocks). */
+.side__head { margin-bottom: 14px; }
+.open-status { display: flex; align-items: center; gap: 8px; margin: 0; font-size: var(--fs-sm); line-height: 22px; color: var(--muted); }
 .open-status__dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); flex: none; }
 .open-status.is-closed .open-status__dot { background: var(--faint); }
 
@@ -431,6 +434,7 @@ button.mcard { cursor: pointer; }
 .ticket__facts dt { font-size: var(--fs-xs); color: var(--on-leather-2); }
 .ticket__facts dd { margin: 1px 0 0; font-size: 1rem; font-weight: 500; color: #fff; }
 .ticket__note { margin-top: 14px; font-size: var(--fs-xs); line-height: 1.55; color: var(--on-leather-2); max-width: 52ch; }
+.ticket__note strong { font-weight: 500; color: #fff; }
 .ticket__actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
 .ticket__actions .btn { min-height: 44px; }
 
@@ -451,6 +455,7 @@ button.mcard { cursor: pointer; }
 .kbook.is-cancelled .kbook__status, .kbook.is-no-show .kbook__status { color: var(--muted); }
 .kbook.is-cancelled .kbook__title { color: var(--muted); text-decoration: line-through; text-decoration-color: var(--faint); }
 .kbook__beans { font-weight: 600; color: var(--gold-ink); }
+.kbook__note { display: block; margin-top: 2px; font-size: var(--fs-xs); line-height: 1.5; color: var(--roast); }
 .kbook__cancel { display: inline-flex; align-items: center; min-height: 44px; margin: -12px 0; font-size: var(--fs-xs); color: var(--muted); text-decoration-color: var(--line-strong); }
 .kbook__cancel:hover { color: var(--bad); text-decoration-color: currentColor; }
 
@@ -734,8 +739,8 @@ body[data-auth="1"] .toasts { bottom: calc(16px + var(--safe-b)); }
   .side, body[data-view="card"] .side { display: block; margin: 0; }
   body[data-auth="1"] .shell { display: block; padding-top: 56px; }
   body[data-auth="1"] .side { display: none; }
-  .greet { font-size: 2.125rem; }
-  .view[data-v="card"] { padding-top: 4px; }
+  /* The card view's first block (after its hidden heading) lands level with the top of the card. */
+  .view[data-v="card"] { padding-top: 0; }
   .toasts { bottom: 28px; left: auto; right: 28px; transform: none; }
   .codebox { max-width: none; margin: 0; padding: 40px 32px 30px; }
   .codebox__qr { width: 208px; }

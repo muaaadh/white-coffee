@@ -76,7 +76,8 @@
     chevronLeft: '<path d="m14.5 6-6 6 6 6"/>',
     call: '<path d="M6.6 3.8h2.7l1.4 4-2 1.4a10.5 10.5 0 0 0 6.1 6.1l1.4-2 4 1.4v2.7a1.8 1.8 0 0 1-1.9 1.8A15.6 15.6 0 0 1 4.8 5.7a1.8 1.8 0 0 1 1.8-1.9z"/>',
     door: '<path d="M5 20.5h14M7 20.5V4.5h10v16"/><path d="M14 12.5v.1"/>',
-    move: '<path d="M4 12h16M16 8l4 4-4 4M8 8l-4 4 4 4"/>'
+    move: '<path d="M4 12h16M16 8l4 4-4 4M8 8l-4 4 4 4"/>',
+    moon: '<path d="M19.6 14.6A7.9 7.9 0 0 1 9.4 4.4a8.2 8.2 0 1 0 10.2 10.2z"/>'
   };
   function icon(name, cls) {
     return '<svg class="ic' + (cls ? ' ' + cls : '') + '" viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">' + (I[name] || '') + '</svg>';
@@ -115,6 +116,12 @@
     if (b !== 'midnight' && a.slice(-2) === b.slice(-2)) a = a.slice(0, -3);
     return a + ' to ' + b;
   }
+  /** "40 minutes", "about 5 hours" */
+  function untilText(ms) {
+    var min = Math.max(1, Math.round(ms / 6e4));
+    if (min < 60) return plural(min, 'minute');
+    var h = Math.round(min / 60); return h === 1 ? 'about an hour' : 'about ' + h + ' hours';
+  }
 
   /** Replace an element's HTML only when it changed; keep focus + caret on the same control. */
   function patch(el, html) {
@@ -134,6 +141,8 @@
   }
 
   function setError(el, msg) { if (!el) return; el.textContent = msg || ''; el.hidden = !msg; }
+  /** Rebuild a select's options only when they changed (the caller sets .value after). */
+  function setOptions(sel, html) { if (sel && sel._opts !== html) { sel.innerHTML = html; sel._opts = html; } }
 
   /** A validation error that belongs to one field (its id). */
   function fail(field, msg) { var e = new Error(msg); e.field = field; throw e; }
@@ -483,7 +492,7 @@
   /* Shell: sign in, sidebar, top bar, tab bar                           */
   /* ------------------------------------------------------------------ */
   var NAV = [
-    { id: 'dashboard', label: 'Dashboard', short: 'Home', icon: 'dashboard', title: 'Dashboard' },
+    { id: 'dashboard', label: 'Tonight', short: 'Tonight', icon: 'moon', title: 'Tonight' },
     { id: 'counter', label: 'Counter', icon: 'cup', title: 'Counter' },
     { id: 'karaoke', label: 'Karaoke', icon: 'mic', title: 'Karaoke' },
     { id: 'members', label: 'Members', icon: 'members', title: 'Members' },
@@ -504,7 +513,7 @@
     $('#side-signout').innerHTML = icon('logout');
     // Phones: the four screens used every night, the rest under More.
     $('#tabbar').innerHTML =
-      '<a class="tab" href="#dashboard" data-nav="dashboard">' + icon('dashboard') + '<span>Home</span></a>' +
+      '<a class="tab" href="#dashboard" data-nav="dashboard">' + icon('moon') + '<span>Tonight</span></a>' +
       '<a class="tab" href="#counter" data-nav="counter"><span class="tab-ic">' + icon('cup') + '<span class="tab-badge" data-codes-badge hidden></span></span><span>Counter</span></a>' +
       '<a class="tab" href="#karaoke" data-nav="karaoke">' + icon('mic') + '<span>Karaoke</span></a>' +
       '<a class="tab" href="#members" data-nav="members">' + icon('members') + '<span>Members</span></a>' +
@@ -625,7 +634,7 @@
         state.drawerReturn = fromHash && fromHash !== '#signin' && fromHash.indexOf('#members') !== 0 ? fromHash : null;
         state.drawerNav = drawerNav(fromHash);
       }
-      if (r.view === 'karaoke' && r.id && /^K-/i.test(r.id)) state.kNav = drawerNav(fromHash);
+      if (r.view === 'karaoke' && r.id && /^K-/i.test(r.id)) { state.kNav = drawerNav(fromHash); state.kFrom = fromHash; }
       current = { name: r.view, v: VIEWS[r.view] };
       current.v.mount(host, r.id);
       updateShell(r.view);
@@ -638,7 +647,7 @@
       }
     } else {
       if (r.view === 'members' && r.id && fromHash.indexOf('#members/') !== 0) { state.drawerReturn = null; state.drawerNav = drawerNav(fromHash); }
-      if (r.view === 'karaoke' && r.id && /^K-/i.test(r.id) && !/^#karaoke\/K-/i.test(fromHash)) state.kNav = drawerNav(fromHash);
+      if (r.view === 'karaoke' && r.id && /^K-/i.test(r.id) && !/^#karaoke\/K-/i.test(fromHash)) { state.kNav = drawerNav(fromHash); state.kFrom = fromHash; }
       if (current.v.route) current.v.route(r.id);
       updateShell(r.view);
       current.v.update();
@@ -1006,21 +1015,22 @@
     prevKpi: null, prevFeed: null, chartKey: '', ro: null,
     mount: function (host) {
       this.prevKpi = null; this.prevFeed = null; this.chartKey = ''; this.chartDrawn = false;
+      // The café opens 4 PM to midnight, so the home screen is tonight: the rooms, the codes at the counter, what just happened.
       host.innerHTML =
         '<div class="page">' +
-        '<header class="page-head"><div class="page-head-txt"><h1 class="page-title" id="page-h1" tabindex="-1">Dashboard</h1><p class="page-meta" id="d-meta"></p></div>' +
+        '<header class="page-head"><div class="page-head-txt"><h1 class="page-title" id="page-h1" tabindex="-1">Tonight</h1><p class="page-meta" id="d-meta"></p></div>' +
         '<div class="page-actions"><a class="btn" href="#counter">' + icon('cup') + 'Open the counter</a><button class="btn btn--ghost" type="button" data-act="k-new">' + icon('mic') + 'New karaoke booking</button></div></header>' +
-        '<section class="kpis" id="d-kpis" aria-label="Today at a glance"></section>' +
+        '<section class="kpis" id="d-kpis" aria-label="So far today"></section>' +
         '<div class="dash-grid"><div class="dash-col dash-col--main">' +
+        '<section class="panel p-karaoke" aria-labelledby="h-kara"><header class="panel-head"><div><h2 class="panel-title" id="h-kara">Rooms tonight</h2><p class="panel-sub" id="d-k-sub"></p></div><a class="btn btn--ghost btn--sm" href="#karaoke">Full schedule</a></header>' +
+        '<div class="kgrid-wrap kgrid-wrap--flush"><div class="kgrid kgrid--compact" id="d-kgrid" role="region" aria-label="Karaoke rooms tonight, by hour"></div></div>' +
+        '<p class="kweek" id="d-kweek"></p></section>' +
+        '<section class="panel p-feed" aria-labelledby="h-feed"><header class="panel-head"><div><h2 class="panel-title" id="h-feed">Activity</h2><p class="panel-sub">Visits, rewards, sign-ups and bookings, newest first</p></div></header><ol class="log feed" id="d-feed" role="list"></ol></section>' +
+        '</div><div class="dash-col dash-col--side">' +
+        '<section class="panel p-codes" aria-labelledby="h-codes"><header class="panel-head"><div><h2 class="panel-title" id="h-codes">Reward codes waiting</h2><p class="panel-sub">Members show these at the counter</p></div><span class="count" id="d-codes-n"></span></header><div class="panel-body" id="d-codes"></div></section>' +
         '<section class="panel p-chart" aria-labelledby="h-chart"><header class="panel-head"><div><h2 class="panel-title" id="h-chart">Visits, last 14 days</h2><p class="panel-sub" id="d-chart-sub"></p></div>' +
         '<button class="btn btn--ghost btn--sm" type="button" data-act="chart-table" aria-expanded="' + state.chartTable + '" aria-controls="d-chart-table">' + (state.chartTable ? 'Show chart' : 'Show as table') + '</button></header>' +
         '<div class="panel-body"><div class="chart" id="d-chart"' + (state.chartTable ? ' hidden' : '') + '></div><div class="chart-table" id="d-chart-table"' + (state.chartTable ? '' : ' hidden') + '></div></div></section>' +
-        '<section class="panel p-feed" aria-labelledby="h-feed"><header class="panel-head"><div><h2 class="panel-title" id="h-feed">Activity</h2><p class="panel-sub">Visits, rewards and sign-ups from the counter and the app, as they happen</p></div><span class="live-badge"><i aria-hidden="true"></i>Live</span></header><ol class="log feed" id="d-feed" role="list"></ol></section>' +
-        '</div><div class="dash-col dash-col--side">' +
-        '<section class="panel p-karaoke" aria-labelledby="h-kara"><header class="panel-head"><div><h2 class="panel-title" id="h-kara">Karaoke today</h2><p class="panel-sub" id="d-k-sub"></p></div><a class="btn btn--ghost btn--sm" href="#karaoke">Schedule</a></header><div id="d-k"></div></section>' +
-        '<section class="panel p-codes" aria-labelledby="h-codes"><header class="panel-head"><div><h2 class="panel-title" id="h-codes">Reward codes waiting</h2><p class="panel-sub">Members show these at the counter</p></div><span class="count" id="d-codes-n"></span></header><div class="panel-body" id="d-codes"></div></section>' +
-        '<section class="panel p-tiers" aria-labelledby="h-tiers"><header class="panel-head"><div><h2 class="panel-title" id="h-tiers">Members by tier</h2><p class="panel-sub" id="d-tiers-sub"></p></div></header><div class="panel-body" id="d-tiers"></div></section>' +
-        '<section class="panel p-top" aria-labelledby="h-top"><header class="panel-head"><div><h2 class="panel-title" id="h-top">Top rewards</h2><p class="panel-sub">Most redeemed, all time</p></div></header><div class="panel-body" id="d-top"></div></section>' +
         '</div></div></div>';
       var self = this, chart = $('#d-chart'), lastW = 0;
       this.ro = new ResizeObserver(function () { var w = chart.clientWidth; if (w && Math.abs(w - lastW) > 2) { lastW = w; self.chartKey = ''; self.renderChart(); } });
@@ -1029,17 +1039,11 @@
     unmount: function () { if (this.ro) this.ro.disconnect(); this.ro = null; },
     update: function () {
       var s = W.stats(14), staff = W.currentStaff(), p = W.maleParts(), open = W.openStatus();
-      // Redemption numbers come from the codes themselves, leaving out cancelled ones, so the dashboard
-      // agrees with the Rewards page (W.stats counts every redeem event, refunded or not; see store requests).
-      var rc = redeemCounts(), weekAgo = Date.now() - 7 * 864e5;
-      s.redemptionsWeek = W.redemptions().filter(function (r) { return r.status !== 'cancelled' && r.ts >= weekAgo; }).length;
-      s.topRewards = Object.keys(rc).map(function (id) { var rw = W.reward(id); return { name: rw ? rw.name : rc[id].name, count: rc[id].n }; })
-        .filter(function (x) { return x.count > 0; }).sort(function (a, b) { return b.count - a.count || a.name.localeCompare(b.name); }).slice(0, 5);
       patch($('#d-meta'), '<span>' + esc(DAYS[p.day] + ' ' + p.d + ' ' + MONTHS[p.mo]) + '</span><span class="meta-open"><span class="status-dot' + (open.open ? ' is-open' : '') + '" aria-hidden="true"></span>' + esc(open.label + ', ' + open.detail) + '</span><span>' + esc(staff) + ' on shift</span>');
-      this.renderKpis(s);
+      var k = this.renderKaraoke();
+      this.renderKpis(s, k);
       this.series = s.series;
       this.renderChart();
-      this.renderKaraoke();
       // Codes waiting
       var ready = W.redemptions('ready');
       patch($('#d-codes-n'), ready.length ? String(ready.length) : '');
@@ -1057,60 +1061,34 @@
       var html = feed.map(function (a) { ids[a.id] = 1; return logRow(a, { withName: true, link: true, ago: true, isNew: prev && !prev[a.id] }); }).join('');
       patch($('#d-feed'), html);
       this.prevFeed = ids;
-      // Tiers
-      var tiers = W.program.tiers, total = s.members || 1;
-      patch($('#d-tiers-sub'), esc(tiers.slice(1).map(function (t) { return t.name + ' from ' + F.num(t.min); }).join(', ') + ' lifetime beans'));
-      patch($('#d-tiers'), '<ul class="hbars" role="list">' + tiers.map(function (t) {
-        var n = s.tiers[t.id] || 0, pct = Math.round(n / total * 100);
-        return '<li class="hbar"><div class="hbar-top">' + tierChip(t) + '<span class="hbar-val"><strong>' + F.num(n) + '</strong> <span class="muted">' + pct + '%</span></span></div>' +
-          '<div class="hbar-track" aria-hidden="true"><i class="hbar-fill hbar-fill--' + esc(t.id) + '" style="width:' + Math.max(n ? 2 : 0, pct) + '%"></i></div></li>';
-      }).join('') + '</ul>');
-      // Top rewards
-      var top = s.topRewards, max = top.length ? top[0].count : 1;
-      patch($('#d-top'), top.length ? '<ol class="hbars hbars--rank" role="list">' + top.map(function (r, i) {
-        return '<li class="hbar"><div class="hbar-top"><span class="rank">' + (i + 1) + '.</span><span class="hbar-name">' + esc(r.name) + '</span><span class="hbar-val"><strong>' + F.num(r.count) + '</strong><span class="visually-hidden"> times</span>×</span></div>' +
-          '<div class="hbar-track" aria-hidden="true"><i class="hbar-fill" style="width:' + Math.round(r.count / max * 100) + '%"></i></div></li>';
-      }).join('') + '</ol>' : emptyState('gift', 'No rewards redeemed yet', ''));
     },
+    /** Rooms tonight: the same schedule as Karaoke, compact. Returns tonight's numbers for the strip above. */
     renderKaraoke: function () {
-      var ks = W.karaokeStats(), today = W.karaokeToday(), rooms = W.karaokeRooms(), R = W.karaokeRules();
-      var bookable = rooms.length * (R.close - R.open);
-      var list = W.karaokeBookings({ date: today }).filter(function (b) { return b.status !== 'cancelled' && b.status !== 'no-show'; });
-      var inRoom = list.filter(function (b) { return b.status === 'checked-in'; }).length;
-      patch($('#d-k-sub'), esc(W.karaokeDateLabel(today) + ', 4 PM to midnight'));
-      patch($('#d-k'),
-        '<dl class="kstats">' +
-        '<div><dt>Bookings</dt><dd class="num">' + F.num(ks.today) + '</dd></div>' +
-        '<div><dt>Room hours</dt><dd class="num">' + F.num(ks.todayHours) + '<small> of ' + bookable + '</small></dd></div>' +
-        '<div><dt>Booked</dt><dd class="num">' + Math.round(ks.occupancyToday * 100) + '%</dd></div>' +
-        '</dl>' +
-        '<p class="kweek"><span>Next 7 days</span><strong class="num">' + plural(ks.upcomingWeek, 'booking') + '</strong><strong class="num">' + esc(F.mvr(ks.revenueWeek)) + '</strong></p>' +
-        (list.length ? '<ul class="kday" role="list">' + list.map(function (b) {
-          return '<li><a class="kday-row" href="#karaoke/' + esc(b.id) + '" data-key="dk-' + esc(b.id) + '"><span class="kday-time num">' + esc(hourRange(b.start, b.hours)) + '</span>' +
-            '<span class="kday-who"><strong>' + esc(b.name) + '</strong><span>' + esc(b.roomName) + ' · ' + plural(b.guests, 'guest') + '</span></span>' + statusHTML(b.status) + '</a></li>';
-        }).join('') + '</ul>' + (inRoom ? '' : '') :
-          '<div class="codes-empty"><p class="empty-title">No karaoke bookings today</p><p class="empty-text">Phone and walk-in bookings go in from the schedule.</p><button class="btn btn--ghost btn--sm" type="button" data-act="k-new" data-key="dk-new">' + icon('plus') + 'New booking</button></div>'));
+      var ks = W.karaokeStats(), today = W.karaokeToday(), R = W.karaokeRules();
+      var live = liveBookings(today), rooms = scheduleRooms(live), cap = W.karaokeRooms().length * (R.close - R.open);
+      var hours = 0, total = 0, inRoom = 0;
+      live.forEach(function (b) { hours += b.hours; total += b.total; if (b.status === 'checked-in') inRoom++; });
+      patch($('#d-k-sub'), esc(W.karaokeDateLabel(today) + ' · ' + (live.length ? plural(live.length, 'booking') + ', ' + hours + ' of ' + cap + ' room hours' : 'no bookings yet')));
+      var grid = $('#d-kgrid'); grid.style.setProperty('--rooms', rooms.length);
+      patch(grid, kGridHTML(today, rooms, live, { compact: true, kp: 'dk' }));
+      if (state.karaoke.flash) { var fl = state.karaoke.flash; setTimeout(function () { if (state.karaoke.flash === fl) state.karaoke.flash = null; }, 2200); }
+      patch($('#d-kweek'), '<span>Next 7 days</span><strong class="num">' + plural(ks.upcomingWeek, 'booking') + '</strong><strong class="num">' + esc(F.mvr(ks.revenueWeek)) + '</strong><span class="kweek-hint">Tap a free hour to book it.</span>');
+      return { n: live.length, hours: hours, cap: cap, total: total, inRoom: inRoom };
     },
-    renderKpis: function (s) {
+    renderKpis: function (s, k) {
       var y = s.series[s.series.length - 2] || { visits: 0, sales: 0 };
-      var vals = { visits: s.visitsToday, sales: s.salesToday, beans: s.beansWeek, members: s.members, redeemed: s.redemptionsWeek, codes: s.readyCodes };
+      var vals = { visits: s.visitsToday, sales: s.salesToday, kara: k.n + ':' + k.hours };
       var tiles = [
         { k: 'visits', label: 'Visits today', v: F.num(s.visitsToday), sub: 'Yesterday ' + F.num(y.visits) },
         { k: 'sales', label: 'Sales today', v: mvrHTML(s.salesToday), sub: 'Yesterday ' + F.mvr(y.sales) },
-        { k: 'beans', label: 'Beans earned, 7 days', v: F.num(s.beansWeek), sub: F.num(s.beansToday) + ' today' },
-        { k: 'members', label: 'Members', v: F.num(s.members), sub: s.newThisWeek ? '+' + F.num(s.newThisWeek) + ' this week' : 'None new this week' },
-        { k: 'redeemed', label: 'Rewards redeemed', v: F.num(s.redemptionsWeek), sub: 'Last 7 days' },
-        { k: 'codes', label: 'Codes waiting', v: F.num(s.readyCodes), sub: s.readyCodes ? 'Serve at the counter' : 'None right now', link: s.readyCodes > 0 }
+        { k: 'kara', label: 'Karaoke tonight', v: F.num(k.n) + ' <span class="unit unit--after">' + (k.n === 1 ? 'booking' : 'bookings') + '</span>',
+          sub: k.inRoom ? k.inRoom + ' in a room now' : k.hours + ' of ' + k.cap + ' room hours, ' + F.mvr(k.total) }
       ];
       var prev = this.prevKpi;
-      var html = tiles.map(function (t) {
-        var tag = t.link ? 'a' : 'div';
-        return '<' + tag + ' class="kpi' + (t.link ? ' kpi--alert' : '') + '"' + (t.link ? ' href="#counter"' : '') + ' data-k="' + t.k + '">' +
-          '<p class="kpi-label">' + t.label + '</p>' +
-          '<p class="kpi-value num">' + t.v + '</p><p class="kpi-sub">' + esc(t.sub) + (t.link ? ' ' + icon('arrowRight', 'ic-sm') : '') + '</p></' + tag + '>';
-      }).join('');
-      patch($('#d-kpis'), html);
-      if (prev) Object.keys(vals).forEach(function (k) { if (prev[k] !== vals[k]) { var el = $('#d-kpis [data-k="' + k + '"]'); if (el) { el.classList.remove('is-flash'); void el.offsetWidth; el.classList.add('is-flash'); } } });
+      patch($('#d-kpis'), tiles.map(function (t) {
+        return '<div class="kpi" data-k="' + t.k + '"><p class="kpi-label">' + t.label + '</p><p class="kpi-value num">' + t.v + '</p><p class="kpi-sub">' + esc(t.sub) + '</p></div>';
+      }).join(''));
+      if (prev) Object.keys(vals).forEach(function (key) { if (prev[key] !== vals[key]) { var el = $('#d-kpis [data-k="' + key + '"]'); if (el) { el.classList.remove('is-flash'); void el.offsetWidth; el.classList.add('is-flash'); } } });
       this.prevKpi = vals;
     },
     renderChart: function () {
@@ -1713,7 +1691,8 @@
     },
     update: function () {
       var ms = state.members, all = W.members(), s = W.stats(7);
-      patch($('#m-desc'), esc(plural(all.length, 'member') + ' · ' + F.num(s.newThisWeek) + ' new this week · ' + F.num(s.outstandingBeans) + ' beans unspent'));
+      patch($('#m-desc'), esc(plural(all.length, 'member') + ' · ' + F.num(s.newThisWeek) + ' new this week · ' + F.num(s.outstandingBeans) + ' beans unspent. ' +
+        W.program.tiers.slice(1).map(function (t) { return t.name + ' from ' + F.num(t.min); }).join(', ') + ' lifetime beans.'));
       var counts = { all: all.length }; W.program.tiers.forEach(function (t) { counts[t.id] = 0; });
       all.forEach(function (m) { counts[W.tier(m).id]++; });
       patch($('#m-tiers'), [{ id: 'all', name: 'All' }].concat(W.program.tiers).map(function (t) {
@@ -1936,14 +1915,15 @@
       patch($('#rw-sum'), '<div class="mini-stat"><span>Active rewards</span><strong>' + active + ' <span class="muted">of ' + all.length + '</span></strong></div>' +
         '<div class="mini-stat"><span>Redeemed, all time</span><strong>' + F.num(total) + '</strong></div>' +
         '<div class="mini-stat"><span>Codes waiting</span><strong>' + F.num(W.redemptions('ready').length) + '</strong></div>');
-      var ed = state.rwEdit, html = '';
+      var ed = state.rwEdit, html = '', topId = null, topN = 0;
+      Object.keys(counts).forEach(function (k) { if (counts[k].n > topN) { topN = counts[k].n; topId = k; } });
       if (ed && ed !== 'new' && !W.reward(ed)) ed = state.rwEdit = null;
       if (ed === 'new') html += this.editRow({ id: '', name: '', cost: '', kind: 'drink', active: true });
       html += all.map(function (r) {
         if (ed === r.id) return Rewards.editRow(r);
         var c = counts[r.id] || { n: 0, ready: 0 };
         return '<div class="rw-row' + (r.active ? '' : ' is-off') + '">' +
-          '<div class="rw-main"><p class="rw-name">' + esc(r.name) + '</p><p class="rw-meta">' + (KINDS[r.kind] || 'Drink') + ' · redeemed ' + (c.n === 1 ? 'once' : F.num(c.n) + ' times') + (c.ready ? ' · <span class="gold-ink">' + c.ready + ' waiting</span>' : '') + '</p></div>' +
+          '<div class="rw-main"><p class="rw-name">' + esc(r.name) + '</p><p class="rw-meta">' + (KINDS[r.kind] || 'Drink') + ' · redeemed ' + (c.n === 1 ? 'once' : F.num(c.n) + ' times') + (r.id === topId ? ', the most of any reward' : '') + (c.ready ? ' · <span class="gold-ink">' + c.ready + ' waiting</span>' : '') + '</p></div>' +
           '<p class="rw-cost"><strong class="num">' + F.num(r.cost) + '</strong> beans</p>' +
           '<div class="rw-toggle">' + switchHTML({ id: 'rwt-' + r.id, on: r.active, act: 'rw-toggle', dataId: r.id, label: 'Show ' + r.name + ' in the app', onText: 'Active', offText: 'Paused' }) + '</div>' +
           '<button class="btn btn--ghost btn--sm rw-edit-btn" type="button" data-act="rw-edit" data-id="' + esc(r.id) + '" data-key="rwe-' + esc(r.id) + '">' + icon('edit') + 'Edit</button></div>';
@@ -2010,6 +1990,7 @@
         '<div class="toolbar toolbar--menu"><div class="search"><label class="visually-hidden" for="mn-q">Search the menu</label>' + icon('search') + '<input class="input" id="mn-q" type="search" placeholder="Search the menu" autocomplete="off" value="' + esc(state.menuQ) + '"></div>' +
         '<div class="jump" id="mn-jump" role="group" aria-label="Jump to a section"></div></div>' +
         '<div class="mn-list" id="mn-list"></div></div>';
+      this.shape = null;
       var self = this, list = $('#mn-list');
       $('#mn-q').addEventListener('input', function () { state.menuQ = this.value; self.update(); });
       list.addEventListener('change', function (e) { var inp = e.target.closest('.mn-price-input'); if (inp) self.savePrice(inp); });
@@ -2067,20 +2048,22 @@
           return '<button type="button" class="utab" data-act="mn-jump" data-cat="' + esc(c.id) + '" data-key="mj-' + esc(c.id) + '">' + esc(c.name) + '</button>';
         }).join('') + '</span>';
       }).join(''));
-      var any = false;
+      var any = false, shape = [q];
+      function catSub(items) { var out = items.filter(function (it) { return !it.available; }).length; return plural(items.length, 'item') + ' · ' + (out ? '<span class="warn-ink">' + out + ' sold out</span>' : 'all available'); }
       var html = groups.map(function (g) {
         var inGroup = cats.filter(function (c) { return c.group === g[0]; }), n = 0;
         var body = inGroup.map(function (c) {
           var items = W.menu(c.id), shown = items.filter(function (it) { return !q || it.name.toLowerCase().indexOf(q) > -1 || (it.desc || '').toLowerCase().indexOf(q) > -1; });
           if (!shown.length) return '';
           any = true; n += shown.length;
-          var out = items.filter(function (it) { return !it.available; }).length;
+          shape.push(c.id, c.name, c.photo || '', items.length);
+          shown.forEach(function (it) { shape.push(it.id, it.name, it.desc || '', it.signature ? 1 : 0); });
           return '<section class="panel mn-cat' + (c.photo ? ' has-photo' : '') + '" id="mn-' + esc(c.id) + '" aria-labelledby="mn-h-' + esc(c.id) + '"><header class="panel-head mn-head">' +
             (c.photo ? '<img class="mn-photo" src="../assets/img/menu/' + esc(c.photo) + '-800.webp" alt="" width="72" height="96" loading="lazy" decoding="async">' : '') +
             '<div><h3 class="panel-title" id="mn-h-' + esc(c.id) + '">' + esc(c.name) + '</h3>' +
-            '<p class="panel-sub">' + plural(items.length, 'item') + ' · ' + (out ? '<span class="warn-ink">' + out + ' sold out</span>' : 'all available') + '</p></div></header>' +
+            '<p class="panel-sub" id="mn-sub-' + esc(c.id) + '">' + catSub(items) + '</p></div></header>' +
             '<ul class="mn-items" role="list">' + shown.map(function (it) {
-              return '<li class="mn-item' + (it.available ? '' : ' is-out') + '">' +
+              return '<li class="mn-item' + (it.available ? '' : ' is-out') + '" data-item="' + esc(it.id) + '">' +
                 '<div class="mn-main"><p class="mn-name">' + esc(it.name) + (it.signature ? ' <span class="sig">House favourite</span>' : '') + '</p>' + (it.desc ? '<p class="mn-desc">' + esc(it.desc) + '</p>' : '') + '</div>' +
                 '<div class="mn-price"><label class="visually-hidden" for="mp-' + esc(it.id) + '">Price of ' + esc(it.name) + ' in MVR</label><span class="mn-cur" aria-hidden="true">MVR</span>' +
                 '<input class="input mn-price-input num" id="mp-' + esc(it.id) + '" data-id="' + esc(it.id) + '" inputmode="decimal" maxlength="9" autocomplete="off" value="' + esc(it.price) + '" aria-describedby="mn-err-' + esc(it.id) + '"></div>' +
@@ -2090,8 +2073,26 @@
         }).join('');
         return body ? '<div class="mn-group"><h2 class="mn-group-h">' + g[1] + ' <span class="muted">' + plural(n, 'item') + '</span></h2>' + body + '</div>' : '';
       }).join('');
-      patch($('#mn-list'), any ? html : '<div class="panel">' + emptyState('search', 'Nothing on the menu matches “' + state.menuQ + '”', 'Try a shorter word, or clear the search to see the whole menu.',
-        '<button class="btn btn--ghost btn--sm" type="button" data-act="mn-clear" data-key="mn-clear">Clear search</button>') + '</div>');
+      var list = $('#mn-list'), key = shape.join('\u0001');
+      if (any && this.shape === key && list.querySelector('.mn-item')) {
+        // Same rows as on screen: change prices, switches and counts in place. Rebuilding the rows here would replace
+        // the control under the pointer, and the click that follows a price save (change fires on blur) would be lost.
+        cats.forEach(function (c) { var s = $('#mn-sub-' + CSS.escape(c.id)); if (s) patch(s, catSub(W.menu(c.id))); });
+        $$('.mn-item', list).forEach(function (li) {
+          var it = W.menuItem(li.dataset.item); if (!it) return;
+          li.classList.toggle('is-out', !it.available);
+          var inp = li.querySelector('.mn-price-input');
+          if (inp && document.activeElement !== inp && inp.value !== String(it.price)) inp.value = it.price;
+          var sw = li.querySelector('.switch'), lab = li.querySelector('.switch-state');
+          if (sw && sw.getAttribute('aria-checked') !== String(!!it.available)) sw.setAttribute('aria-checked', String(!!it.available));
+          if (lab) { var t = it.available ? 'Available' : 'Sold out'; if (lab.textContent !== t) lab.textContent = t; }
+        });
+        list._html = null;
+      } else {
+        patch(list, any ? html : '<div class="panel">' + emptyState('search', 'Nothing on the menu matches “' + state.menuQ + '”', 'Try a shorter word, or clear the search to see the whole menu.',
+          '<button class="btn btn--ghost btn--sm" type="button" data-act="mn-clear" data-key="mn-clear">Clear search</button>') + '</div>');
+      }
+      this.shape = any ? key : null;
       this.spy();
     },
     act: function (el) {
@@ -2406,6 +2407,51 @@
     return n;
   }
 
+  /** Bookings that hold a room on a date (cancelled and no-shows free it). */
+  function liveBookings(date) { return W.karaokeBookings({ date: date }).filter(function (b) { return b.status !== 'cancelled' && b.status !== 'no-show'; }); }
+  /** Rooms to draw for a date: the active ones, plus a paused room that still has bookings. */
+  function scheduleRooms(live) { return W.karaokeRooms(true).filter(function (r) { return r.active || live.some(function (b) { return b.roomId === r.id; }); }); }
+  /**
+   * The day schedule: rooms across, hours down, bookings as blocks over their hours, free hours as buttons.
+   * Used by Karaoke > Schedule and, compact (o.compact, keys prefixed o.kp), by Rooms tonight on the dashboard.
+   */
+  function kGridHTML(date, rooms, live, o) {
+    o = o || {};
+    var R = W.karaokeRules(), today = W.karaokeToday(), now = Date.now(), np = W.maleParts(now), max = W.karaokeAddDays(today, R.daysAhead);
+    var kp = o.kp || 'k', flash = state.karaoke.flash, ids = rooms.map(function (r) { return r.id; });
+    var html = '<div class="kg-corner" style="grid-row:1;grid-column:1"></div>';
+    rooms.forEach(function (r, i) {
+      html += '<div class="kg-room" style="grid-row:1;grid-column:' + (i + 2) + '"><strong>' + esc(r.name) + '</strong><span>' + r.capacity + ' people · ' + F.num(r.rate) + '/h</span>' + (r.active ? '' : '<span class="warn-ink">Paused</span>') + '</div>';
+    });
+    for (var j = 0; j < R.close - R.open; j++) html += '<div class="kg-hour" style="grid-row:' + (j + 2) + '"><span>' + esc(hourLabel(R.open + j)) + '</span></div>';
+    rooms.forEach(function (r, i) {
+      var t = takenHours(r.id, date);
+      for (var h = R.open; h < R.close; h++) {
+        if (t[h]) continue;
+        var pos = 'grid-row:' + (h - R.open + 2) + ';grid-column:' + (i + 2);
+        var startTs = keyToTs(date, h), endTs = keyToTs(date, h + 1);
+        var nowHour = startTs <= now && now < endTs;
+        if (r.active && (startTs > now || nowHour) && date <= max) {
+          html += '<button type="button" class="kg-cell kg-free' + (nowHour ? ' is-now' : '') + '" style="' + pos + '" data-act="k-new" data-room="' + esc(r.id) + '" data-date="' + date + '" data-hour="' + h + '"' + (nowHour ? ' data-walkin="1"' : '') +
+            ' data-key="' + kp + 'f-' + esc(r.id) + '-' + h + '" aria-label="' + esc((nowHour ? 'Walk-in now: ' : 'Book ') + r.name + ' at ' + hourLabel(h)) + '"><span>' + (nowHour ? 'Walk-in' : '+<span class="kg-fh"> ' + esc(hourLabel(h)) + '</span>') + '</span></button>';
+        } else html += '<span class="kg-cell is-past" style="' + pos + '"></span>';
+      }
+    });
+    live.forEach(function (b) {
+      var i = ids.indexOf(b.roomId); if (i < 0) return;
+      var label = b.id + ', ' + b.name + ', ' + b.roomName + ', ' + hourRange(b.start, b.hours) + ', ' + plural(b.guests, 'guest') + ', ' + (STATUS[b.status] || b.status);
+      html += '<a class="kb kb--' + esc(b.status) + (b.hours === 1 ? ' kb--short' : '') + (flash === b.id ? ' is-flash' : '') + '" href="#karaoke/' + esc(b.id) + '" data-key="' + kp + 'b-' + esc(b.id) + '" style="grid-row:' + (b.start - R.open + 2) + ' / span ' + b.hours + ';grid-column:' + (i + 2) + '" aria-label="' + esc(label) + '">' +
+        '<span class="kb-top"><span class="kb-time num">' + esc(hourRange(b.start, b.hours)) + '</span>' + (b.status !== 'confirmed' ? '<span class="kb-st">' + esc(STATUS[b.status]) + '</span>' : '') + '</span>' +
+        '<strong class="kb-name">' + esc(b.name) + '</strong>' +
+        (o.compact ? '' : '<span class="kb-meta">' + plural(b.guests, 'guest') + ' · ' + esc(b.id) + (b.memberId ? ' · member' : '') + '</span>' +
+        (b.notes ? '<span class="kb-note">' + esc(b.notes) + '</span>' : '')) + '</a>';
+    });
+    if (date === today && np.h >= R.open && np.h < R.close) {
+      html += '<div class="kg-now" style="grid-row:' + (np.h - R.open + 2) + ';grid-column:1 / -1;--at:' + (np.mi / 60 * 100).toFixed(1) + '%" aria-hidden="true"><i></i><span>' + esc(F.time(now)) + '</span></div>';
+    }
+    return html;
+  }
+
   var Karaoke = {
     tabMounted: null,
     mount: function (host, id) {
@@ -2463,14 +2509,14 @@
           '<p class="hint k-hint">Tap a free hour to book it. Tap a booking to check in, complete, move, cancel or call.</p></section>';
         $('#k-dpick').addEventListener('change', function () { if (isDateKey(this.value)) self.go(this.value); });
       } else if (k.tab === 'list') {
-        body.innerHTML = '<div class="toolbar">' +
+        body.innerHTML = '<div class="k-list"><div class="toolbar">' +
           '<div class="search"><label class="visually-hidden" for="k-q">Search bookings</label>' + icon('search') + '<input class="input" id="k-q" type="search" placeholder="Name, phone or reference" autocomplete="off" spellcheck="false" value="' + esc(k.q) + '"></div>' +
           '<div class="sort-sel"><label for="k-when">Show</label><select class="select" id="k-when">' + [['upcoming', 'Today and later'], ['today', 'Today'], ['past', 'Past'], ['all', 'All dates']].map(function (o) { return '<option value="' + o[0] + '"' + (k.when === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select></div>' +
           '<div class="sort-sel"><label for="k-status">Status</label><select class="select" id="k-status"><option value="">Any</option>' + W.karaokeRules().statuses.map(function (st) { return '<option value="' + st + '"' + (k.status === st ? ' selected' : '') + '>' + STATUS[st] + '</option>'; }).join('') + '</select></div>' +
           '</div>' +
           '<p class="k-count" id="k-count" aria-live="polite"></p>' +
           '<div class="panel k-table-wrap"><table class="table k-table"><caption class="visually-hidden">Karaoke bookings</caption><thead><tr><th scope="col" class="c-ref">Reference</th><th scope="col" class="c-when">When</th><th scope="col" class="c-room">Room</th><th scope="col" class="c-guest">Booked by</th><th scope="col" class="r c-n">Guests</th><th scope="col" class="r c-total">Total</th><th scope="col" class="c-st">Status</th></tr></thead><tbody id="k-tbody"></tbody></table></div>' +
-          '<ul class="k-cards" id="k-cards" role="list"></ul><div id="k-empty"></div>';
+          '<ul class="k-cards" id="k-cards" role="list"></ul><div id="k-empty"></div></div>';
         $('#k-q').addEventListener('input', function () { k.q = this.value; self.update(); });
         $('#k-when').addEventListener('change', function () { k.when = this.value; self.update(); });
         $('#k-status').addEventListener('change', function () { k.status = this.value; self.update(); });
@@ -2514,8 +2560,7 @@
       var nx = $('#k-next'); if (nx) nx.disabled = date >= max;
       var tb = $('#k-todaybtn'); if (tb) tb.disabled = date === today;
       var dayB = W.karaokeBookings({ date: date });
-      var live = dayB.filter(function (b) { return b.status !== 'cancelled' && b.status !== 'no-show'; });
-      var rooms = W.karaokeRooms(true).filter(function (r) { return r.active || live.some(function (b) { return b.roomId === r.id; }); });
+      var live = liveBookings(date), rooms = scheduleRooms(live);
       var paused = W.karaokeRooms(true).filter(function (r) { return rooms.indexOf(r) < 0; });
       var hours = R.close - R.open, booked = 0, total = 0, inRoom = 0;
       live.forEach(function (b) { booked += b.hours; total += b.total; if (b.status === 'checked-in') inRoom++; });
@@ -2523,36 +2568,7 @@
       patch($('#k-sum'), live.length ?
         '<span><strong>' + plural(live.length, 'booking') + '</strong></span><span>' + booked + ' of ' + cap + ' room hours booked (' + (cap ? Math.round(booked / cap * 100) : 0) + '%)</span><span>' + esc(F.mvr(total)) + ' in room charges</span>' + (inRoom ? '<span class="ok-ink">' + inRoom + ' in a room now</span>' : '') :
         '<span>No bookings on this day yet.</span>');
-      var html = '<div class="kg-corner" style="grid-row:1;grid-column:1"></div>';
-      rooms.forEach(function (r, i) {
-        html += '<div class="kg-room" style="grid-row:1;grid-column:' + (i + 2) + '"><strong>' + esc(r.name) + '</strong><span>' + r.capacity + ' people · ' + F.num(r.rate) + '/h</span>' + (r.active ? '' : '<span class="warn-ink">Paused</span>') + '</div>';
-      });
-      for (var j = 0; j < hours; j++) html += '<div class="kg-hour" style="grid-row:' + (j + 2) + '"><span>' + esc(hourLabel(R.open + j)) + '</span></div>';
-      rooms.forEach(function (r, i) {
-        var t = takenHours(r.id, date);
-        for (var h = R.open; h < R.close; h++) {
-          if (t[h]) continue;
-          var pos = 'grid-row:' + (h - R.open + 2) + ';grid-column:' + (i + 2);
-          var startTs = keyToTs(date, h), endTs = keyToTs(date, h + 1);
-          var nowHour = startTs <= now && now < endTs;
-          if (r.active && (startTs > now || nowHour) && date <= max) {
-            html += '<button type="button" class="kg-cell kg-free' + (nowHour ? ' is-now' : '') + '" style="' + pos + '" data-act="k-new" data-room="' + esc(r.id) + '" data-date="' + date + '" data-hour="' + h + '"' + (nowHour ? ' data-walkin="1"' : '') +
-              ' data-key="kf-' + esc(r.id) + '-' + h + '" aria-label="' + esc((nowHour ? 'Walk-in now: ' : 'Book ') + r.name + ' at ' + hourLabel(h)) + '"><span>' + (nowHour ? 'Walk-in' : '+<span class="kg-fh"> ' + esc(hourLabel(h)) + '</span>') + '</span></button>';
-          } else html += '<span class="kg-cell is-past" style="' + pos + '"></span>';
-        }
-      });
-      live.forEach(function (b) {
-        var i = rooms.map(function (r) { return r.id; }).indexOf(b.roomId); if (i < 0) return;
-        var label = b.id + ', ' + b.name + ', ' + b.roomName + ', ' + hourRange(b.start, b.hours) + ', ' + plural(b.guests, 'guest') + ', ' + (STATUS[b.status] || b.status);
-        html += '<a class="kb kb--' + esc(b.status) + (b.hours === 1 ? ' kb--short' : '') + (k.flash === b.id ? ' is-flash' : '') + '" href="#karaoke/' + esc(b.id) + '" data-key="kb-' + esc(b.id) + '" style="grid-row:' + (b.start - R.open + 2) + ' / span ' + b.hours + ';grid-column:' + (i + 2) + '" aria-label="' + esc(label) + '">' +
-          '<span class="kb-top"><span class="kb-time num">' + esc(hourRange(b.start, b.hours)) + '</span>' + (b.status !== 'confirmed' ? '<span class="kb-st">' + esc(STATUS[b.status]) + '</span>' : '') + '</span>' +
-          '<strong class="kb-name">' + esc(b.name) + '</strong>' +
-          '<span class="kb-meta">' + plural(b.guests, 'guest') + ' · ' + esc(b.id) + (b.memberId ? ' · member' : '') + '</span>' +
-          (b.notes ? '<span class="kb-note">' + esc(b.notes) + '</span>' : '') + '</a>';
-      });
-      if (date === today && np.h >= R.open && np.h < R.close) {
-        html += '<div class="kg-now" style="grid-row:' + (np.h - R.open + 2) + ';grid-column:1 / -1;--at:' + (np.mi / 60 * 100).toFixed(1) + '%" aria-hidden="true"><i></i><span>' + esc(F.time(now)) + '</span></div>';
-      }
+      var html = kGridHTML(date, rooms, live);
       var grid = $('#k-grid');
       if (grid) grid.style.setProperty('--rooms', rooms.length);
       patch(grid, html);
@@ -2697,7 +2713,7 @@
     var b = W.karaokeBooking(id); if (!b) return;
     if (bk && bk.id === b.id) { updateBooking(); return; }
     if (bk) closeDialog(bk.dlg, true, true);
-    var nav = state.kNav || 'deep';
+    var nav = state.kNav || 'deep', from = state.kFrom || '';
     var dlg = openDialog({
       cls: 'dlg--drawer', labelledby: 'bk-title',
       guard: function () { return bk && bk.dlg === dlg && bk.moving && bk.moveDirty ? confirmDiscard('the booking move') : true; },
@@ -2710,9 +2726,14 @@
         '<section class="md-sec" aria-labelledby="bk-h-guest"><h3 class="sub-title" id="bk-h-guest">Guest</h3><dl class="facts" id="bk-guest"></dl></section>' +
         '</div></div>',
       onClose: function () {
+        var movedDay = bk && bk.dlg === dlg ? bk.movedDay : null;
         if (bk && bk.dlg === dlg) bk = null;
         var r = parseHash();
         if (r.view !== 'karaoke' || !r.id || r.id.toUpperCase() !== b.id) return;
+        // Moved to another day while open over the schedule: land on that day. Going Back would show the old one.
+        if (movedDay && state.karaoke.tab === 'schedule' && (nav === 'deep' || /^#karaoke(\/\d{4}-\d{2}-\d{2})?$/.test(from))) {
+          state.karaoke.date = movedDay; history.replaceState(null, '', Karaoke.baseHash()); route(); return;
+        }
         if (nav === 'push') history.back();
         else { history.replaceState(null, '', Karaoke.baseHash()); route(); }
       }
@@ -2739,9 +2760,10 @@
       if (startTs < now) acts.push('<button class="btn btn--ghost" type="button" data-act="bk-noshow" data-key="bk-ns">No-show</button>');
       acts.push('<button class="btn btn--danger-ghost" type="button" data-act="bk-cancel" data-key="bk-cx">Cancel booking</button>');
     } else if (b.status === 'checked-in') {
-      acts.push('<button class="btn" type="button" data-act="bk-complete" data-key="bk-done">' + icon('check') + 'Complete' + (m ? ' · ' + beans(W.previewEarn(m.id, b.total)) : '') + '</button>');
+      acts.push('<button class="btn" type="button" data-act="bk-complete" data-key="bk-done">' + icon('check') + (startTs > now ? 'Complete early' : 'Complete') + (m ? ' · ' + beans(W.previewEarn(m.id, b.total)) : '') + '</button>');
       acts.push('<button class="btn btn--ghost" type="button" data-act="bk-move" data-key="bk-mv" aria-expanded="' + bk.moving + '">' + icon('move') + 'Change room or length</button>');
       acts.push('<a class="btn btn--ghost" href="' + esc(tel) + '" data-key="bk-call">' + icon('call') + 'Call</a>');
+      acts.push('<button class="btn btn--ghost" type="button" data-act="bk-undo-in" data-key="bk-undo">' + icon('undo') + 'Undo check-in</button>');
     } else {
       acts.push('<a class="btn btn--ghost" href="' + esc(tel) + '" data-key="bk-call">' + icon('call') + 'Call</a>');
       if (b.status !== 'completed') acts.push('<button class="btn btn--ghost" type="button" data-act="bk-again" data-key="bk-again">' + icon('plus') + 'Book again</button>');
@@ -2784,6 +2806,8 @@
     var lens = '';
     for (var n = 1; n <= R.maxHours; n++) lens += '<option value="' + n + '"' + (n === mv.hours ? ' selected' : '') + (n > fit ? ' disabled' : '') + '>' + plural(n, 'hour') + (n > fit ? ' (does not fit)' : '') + '</option>';
     var changed = mv.roomId !== b.roomId || mv.date !== b.date || mv.start !== b.start || mv.hours !== b.hours;
+    // Same room keeps the rate it was booked at (the Rooms tab promises this); a new room takes that room's rate.
+    var rate = mv.roomId === b.roomId ? b.rate : (room ? room.rate : 0);
     return '<form class="bk-move" id="bk-move-form" novalidate><h3 class="sub-title">' + (inRoom ? 'Change room or length' : 'Move booking') + '</h3><div class="form-grid">' +
       '<div class="field span-2"><label for="mv-room">Room</label><select class="select" id="mv-room">' + rooms.map(function (r) {
         return '<option value="' + esc(r.id) + '"' + (r.id === mv.roomId ? ' selected' : '') + (r.capacity < b.guests ? ' disabled' : '') + '>' + esc(r.name) + ', fits ' + r.capacity + ', ' + esc(F.mvr(r.rate)) + '/h' + (r.capacity < b.guests ? ' (too small)' : '') + '</option>';
@@ -2791,7 +2815,7 @@
       '<div class="field"><label for="mv-date">Date</label><input class="input" type="date" id="mv-date" value="' + mv.date + '" min="' + today + '" max="' + W.karaokeAddDays(today, R.daysAhead) + '"' + (inRoom ? ' disabled' : '') + '></div>' +
       '<div class="field"><label for="mv-start">Start</label><select class="select" id="mv-start"' + (inRoom ? ' disabled' : '') + '>' + starts + '</select></div>' +
       '<div class="field span-2"><label for="mv-hours">How long</label><select class="select" id="mv-hours">' + lens + '</select></div>' +
-      '</div><p class="bk-move-sum" aria-live="polite">' + (changed ? esc((room ? room.name : '') + ', ' + shortDay(mv.date) + ', ' + hourRange(mv.start, mv.hours) + ', new total ' + F.mvr((room ? room.rate : 0) * mv.hours)) : 'Pick a new room, date or time.') + '</p>' +
+      '</div><p class="bk-move-sum" aria-live="polite">' + (changed ? esc((room ? room.name : '') + ', ' + shortDay(mv.date) + ', ' + hourRange(mv.start, mv.hours) + ', new total ' + F.mvr(rate * mv.hours)) : 'Pick a new room, date or time.') + '</p>' +
       '<p class="form-error" id="mv-err" role="alert" hidden></p>' +
       '<div class="form-actions"><button class="btn btn--ghost" type="button" data-act="bk-move-cancel">Keep as it is</button><button class="btn" type="submit"' + (changed ? '' : ' disabled') + '>Save the move</button></div></form>';
   }
@@ -2817,13 +2841,15 @@
     var room = W.karaokeRoom(mv.roomId);
     if (room && room.capacity < b.guests) { setError(err, 'The ' + room.name + ' fits ' + room.capacity + ', and this booking is for ' + b.guests + '.'); return; }
     if (b.status === 'confirmed' && keyToTs(mv.date, mv.start + 1) <= Date.now()) { setError(err, 'That time has passed. Pick a later hour.'); return; }
-    var was = b.roomName + ', ' + shortDay(b.date) + ', ' + hourRange(b.start, b.hours);
+    var was = b.roomName + ', ' + shortDay(b.date) + ', ' + hourRange(b.start, b.hours), wasDate = b.date, wasTotal = b.total;
     try {
-      W.moveKaraoke(b.id, { roomId: mv.roomId, date: mv.date, start: mv.start, hours: mv.hours });
+      // moveKaraoke re-reads storage first, so `b` above is an old copy now. Everything after this uses what it returns.
+      var moved = W.moveKaraoke(b.id, { roomId: mv.roomId, date: mv.date, start: mv.start, hours: mv.hours });
       bk.moving = false; bk.moveDirty = false;
-      state.karaoke.flash = b.id;
-      if (state.karaoke.tab === 'schedule') state.karaoke.date = b.date;
-      toast(b.id + ' moved', { sub: 'Now ' + b.roomName + ', ' + shortDay(b.date) + ', ' + hourRange(b.start, b.hours) + ' (was ' + was + ')' });
+      if (moved.date !== wasDate) bk.movedDay = moved.date;
+      state.karaoke.flash = moved.id;
+      if (state.karaoke.tab === 'schedule') state.karaoke.date = moved.date;
+      toast(moved.id + ' moved', { sub: 'Now ' + moved.roomName + ', ' + shortDay(moved.date) + ', ' + hourRange(moved.start, moved.hours) + (moved.total !== wasTotal ? ', ' + F.mvr(moved.total) : '') + ' (was ' + was + ')' });
       updateBooking();
       var f = $('[data-key="bk-mv"]', bk.dlg); if (f) f.focus();
     } catch (e) { setError(err, errMsg(e)); }
@@ -2835,10 +2861,19 @@
       try { W.setKaraokeStatus(b.id, st, staffName()); toast(msg, { sub: sub }); updateBooking(); var f = $('#bk-actions .btn', bk && bk.dlg); if (f) f.focus(); }
       catch (e) { toast(errMsg(e), { kind: 'error' }); }
     }
+    var startTs = keyToTs(b.date, b.start), early = startTs - Date.now();
     switch (a) {
-      case 'bk-checkin': setStatus('checked-in', who + ' checked in', b.roomName + ' until ' + hourLabel(b.start + b.hours)); return true;
+      case 'bk-checkin':
+        // Check in is offered all day; more than an hour early is usually a mis-tap, so ask.
+        if (early > 36e5) {
+          confirmBox({ title: 'Check in early?', body: 'This booking starts at ' + hourLabel(b.start) + ', ' + untilText(early) + ' from now. Check ' + who + '\'s group in only if they are here and the ' + b.roomName + ' is free.', ok: 'Check in now' })
+            .then(function (ok) { if (ok) setStatus('checked-in', who + ' checked in', b.roomName + ' until ' + hourLabel(b.start + b.hours)); });
+        } else setStatus('checked-in', who + ' checked in', b.roomName + ' until ' + hourLabel(b.start + b.hours));
+        return true;
+      case 'bk-undo-in': setStatus('confirmed', who + ' is no longer checked in', 'Back to confirmed, ' + b.roomName + ' ' + hourRange(b.start, b.hours)); return true;
       case 'bk-complete':
-        confirmBox({ title: 'Complete ' + b.id + '?', body: 'Use this once ' + who + '\'s group has left the ' + b.roomName + '. ' + (m ? m.name + ' earns ' + beans(W.previewEarn(m.id, b.total)) + ' on the ' + F.mvr(b.total) + ' room total.' : 'This booking is not linked to a White Rewards card, so no beans.') + ' A completed booking cannot be changed.', ok: 'Complete booking' })
+        confirmBox({ title: (early > 0 ? 'Complete ' + b.id + ' early?' : 'Complete ' + b.id + '?'),
+          body: (early > 0 ? 'This booking runs ' + hourRange(b.start, b.hours) + ' and has not started yet. ' : '') + 'Use this once ' + who + '\'s group has left the ' + b.roomName + '. ' + (m ? m.name + ' earns ' + beans(W.previewEarn(m.id, b.total)) + ' on the ' + F.mvr(b.total) + ' room total.' : 'This booking is not linked to a White Rewards card, so no beans.') + ' A completed booking cannot be changed.', ok: early > 0 ? 'Complete early' : 'Complete booking' })
           .then(function (ok) { if (ok) setStatus('completed', b.id + ' completed', m ? beans(W.previewEarn(m.id, b.total)) + ' for ' + firstName(m.name) : b.roomName + ' is free again'); });
         return true;
       case 'bk-noshow':
@@ -2927,22 +2962,27 @@
           opts += '<option value="' + h2 + '"' + (h2 === st.start ? ' selected' : '') + (t[h2] || past ? ' disabled' : '') + '>' + esc(hourLabel(h2)) + (t[h2] ? ' (booked)' : past ? ' (passed)' : '') + '</option>';
         }
       }
-      var ss = $('#nb-start', form); ss.innerHTML = opts; ss.disabled = walk; ss.value = st.start != null ? String(st.start) : '';
+      var ss = $('#nb-start', form); setOptions(ss, opts); ss.disabled = walk; ss.value = st.start != null ? String(st.start) : '';
       var fit = st.start != null ? fitHours(st.roomId, st.date, st.start) : 0;
       if (st.hours > fit) st.hours = Math.max(1, fit);
       var hs = '';
-      for (var n = 1; n <= R2.maxHours; n++) hs += '<option value="' + n + '"' + (n === st.hours ? ' selected' : '') + (n > fit ? ' disabled' : '') + '>' + plural(n, 'hour') + (room ? ', ' + esc(F.mvr(room.rate * n)) : '') + (n > fit ? ' (does not fit)' : '') + '</option>';
-      $('#nb-hours', form).innerHTML = hs;
+      for (var n = 1; n <= R2.maxHours; n++) hs += '<option value="' + n + '"' + (n > fit ? ' disabled' : '') + '>' + plural(n, 'hour') + (room ? ', ' + esc(F.mvr(room.rate * n)) : '') + (n > fit ? ' (does not fit)' : '') + '</option>';
+      var hsel = $('#nb-hours', form); setOptions(hsel, hs); hsel.value = String(st.hours);
       var mm = memberByPhone($('#nb-phone', form).value);
       st.memberId = mm ? mm.id : null;
       patch($('#nb-member', form), mm ? '<span class="nb-linked">White Rewards: <strong>' + esc(mm.name) + '</strong> · ' + esc(W.tier(mm).name) + '. Linked to their card, so they earn beans when the booking is completed.</span>' : '');
       var guests = Number($('#nb-guests', form).value) || 0;
       patch($('#nb-sum', form), room && st.start != null ? '<strong>' + esc(room.name + ', ' + shortDay(st.date) + ', ' + hourRange(st.start, st.hours)) + '</strong>, ' + plural(st.hours, 'hour') + (guests ? ', ' + plural(guests, 'guest') : '') + ', <strong>' + esc(F.mvr(room.rate * st.hours)) + '</strong>. Paid at the café, plus 10% service charge and 8% GST.' : 'Pick a day with a free hour.');
-      $('#nb-go', form).textContent = walk ? 'Book and check in' : 'Book room';
+      // Write the label only when it changes: Safari drops a click whose text node is replaced between press and release.
+      var go = $('#nb-go', form), lbl = walk ? 'Book and check in' : 'Book room';
+      if (go.textContent !== lbl) go.textContent = lbl;
     }
     form.addEventListener('click', function (e) { var s = e.target.closest('.seg-btn'); if (s) { st.source = s.dataset.src; if (st.source === 'Phone') st.start = null; clearFieldErrs(form); setError($('#nb-err', form), ''); sync(); } });
     form.addEventListener('change', function (e) {
       var id = e.target.id;
+      // Text fields already sync on input. Their change event fires on blur, often in the middle of a tap on Book room,
+      // so it must not rebuild anything.
+      if (!/^nb-(room|date|start|hours)$/.test(id)) return;
       if (id === 'nb-room') st.roomId = e.target.value;
       if (id === 'nb-date' && isDateKey(e.target.value)) { st.date = e.target.value; st.start = null; }
       if (id === 'nb-start') st.start = e.target.value === '' ? null : Number(e.target.value);
@@ -2954,6 +2994,7 @@
     form.addEventListener('input', function (e) {
       if (e.target.id === 'nb-guests') { var v = e.target.value.replace(/\D/g, '').slice(0, 2); if (v !== e.target.value) e.target.value = v; }
       if (e.target.getAttribute('aria-invalid') === 'true') fieldErr(e.target, '');
+      setError($('#nb-err', form), '');
       if (e.target.id === 'nb-phone') {
         var mm = memberByPhone(e.target.value), nm = $('#nb-name', form);
         if (mm && !nm.value.trim()) nm.value = mm.name;
@@ -2982,7 +3023,8 @@
         state.karaoke.flash = b.id; state.karaoke.date = b.date; state.karaoke.tab = 'schedule';
         toast((st.source === 'Walk-in' ? 'Checked in: ' : 'Booked: ') + b.id, { sub: b.roomName + ', ' + shortDay(b.date) + ', ' + hourRange(b.start, b.hours) + ' · ' + b.name, action: { label: 'Open', fn: function () { location.hash = '#karaoke/' + b.id; } } });
         var h = '#karaoke' + (b.date !== W.karaokeToday() ? '/' + b.date : '');
-        if (current && current.name === 'karaoke') { Karaoke.tabMounted = null; history.replaceState(null, '', h); prevHash = h; route(); }
+        if (current && current.name === 'dashboard' && b.date === W.karaokeToday()) { /* it shows in Rooms tonight */ }
+        else if (current && current.name === 'karaoke') { Karaoke.tabMounted = null; history.replaceState(null, '', h); prevHash = h; route(); }
         else location.hash = h;
       } catch (ex) {
         showFormError(form, ex, err, { 'booked that time': 'nb-start', 'start time': 'nb-start', 'people': 'nb-guests', 'phone': 'nb-phone', 'name': 'nb-name', 'midnight': 'nb-hours' });

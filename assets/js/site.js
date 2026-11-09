@@ -256,7 +256,7 @@
   const span = (a, b) => W.fmtClock(a) + ' to ' + W.fmtClock(b);       // '4 PM to midnight'
 
   /* ---------------- open / closed + hours ---------------- */
-  let shownDay = -1;
+  let shownHours = '';
   function renderStatus() {
     const s = W.openStatus();
     for (const el of $$('[data-open-status]')) {
@@ -266,22 +266,31 @@
       if (txt) txt.textContent = s.label + (s.detail ? ', ' + s.detail : '');
     }
   }
+  /** One line ("Every day, 4 PM to midnight") while all seven days match; a day-by-day table only when they differ. */
   function renderHours(force) {
-    const body = $('[data-hours]');
-    if (!body) return;
+    const line = $('[data-hours-line]'), table = $('[data-hours-table]'), body = $('[data-hours]');
+    if (!line && !body) return;
     const today = W.maleParts().day;
-    if (!force && today === shownDay) return;
-    shownDay = today;
+    const sig = today + JSON.stringify(W.info.hours);
+    if (!force && sig === shownHours) return;
+    shownHours = sig;
     const byDay = {};
     for (const h of W.info.hours) byDay[h.day] = h;
-    let html = '';
-    for (let d = 0; d < 7; d++) {
-      const h = byDay[d], isToday = d === today;
-      html += '<tr' + (isToday ? ' class="is-today"' : '') + '>' +
-        '<th scope="row">' + DAYS[d] + (isToday ? '<span class="hours__today">Today</span>' : '') + '</th>' +
-        '<td>' + (h ? span(h.open, h.close) : 'Closed') + '</td></tr>';
+    const days = DAYS.map((_, d) => byDay[d]);
+    const same = days.every((h) => h && h.open === days[0].open && h.close === days[0].close);
+    const nb = (s) => s.replace(/ (AM|PM)\b/g, ' $1');
+    if (line) { line.hidden = !same; if (same) line.textContent = 'Every day, ' + nb(span(days[0].open, days[0].close)); }
+    if (table) table.hidden = same;
+    if (body && !same) {
+      let html = '';
+      days.forEach((h, d) => {
+        const isToday = d === today;
+        html += '<tr' + (isToday ? ' class="is-today"' : '') + '>' +
+          '<th scope="row">' + DAYS[d] + (isToday ? '<span class="hours__today">Today</span>' : '') + '</th>' +
+          '<td>' + (h ? esc(span(h.open, h.close)) : 'Closed') + '</td></tr>';
+      });
+      body.innerHTML = html;
     }
-    body.innerHTML = html;
     const note = $('[data-hours-note]');
     if (note) note.textContent = (W.info.hoursNote ? W.info.hoursNote + ', ' : '') + 'Malé time';
   }
@@ -320,8 +329,8 @@
   const mbar = $('[data-mbar]');
   const tabs = $$('[data-menu-tabs] [role="tab"]');
   const GROUPS = tabs.map((t) => t.dataset.group);
-  // The House specials section above already shows this photo big.
-  const FEATURED_PHOTOS = new Set($('[data-specials]') ? ['fried-noodles-rice'] : []);
+  // Photos the page already shows big (the hero, the house specials) are not repeated beside a menu category.
+  const FEATURED_PHOTOS = new Set($$('[data-featured-photo]').map((el) => el.dataset.featuredPhoto));
   const PHOTO_ALT = {
     'breakfast-spread': "A Maldivian breakfast of mas'huni with roshi, a grilled breakfast platter and a bowl of chicken and mushroom soup, on white plates with gold rims",
     'fried-noodles-rice': 'Special fried noodles and special fried rice topped with a fried egg, with gold cutlery',
@@ -371,14 +380,16 @@
     const ids = b.cats.map((c) => c.id);
     return W.menu().filter((m) => m.photo === b.photo && ids.indexOf(m.cat) >= 0).map((m) => m.name);
   }
+  // the faint gold W their printed menu sets behind every list page
+  const WATERMARK = '<span class="spread__w" aria-hidden="true">W</span>';
   function spreadHTML(b, flip) {
     if (!b.photo) {
-      return '<div class="spread spread--text' + (b.cats.length === 1 ? ' spread--single' : '') + '" data-reveal>' +
+      return '<div class="spread spread--text' + (b.cats.length === 1 ? ' spread--single' : '') + '" data-reveal>' + WATERMARK +
         '<div class="spread__cols rv">' + b.cats.map(catHTML).join('') + '</div></div>';
     }
     const src = 'assets/img/menu/' + b.photo;
     const names = pictured(b);
-    return '<div class="spread spread--photo' + (flip ? ' spread--flip' : '') + '" data-reveal>' +
+    return '<div class="spread spread--photo' + (flip ? ' spread--flip' : '') + '" data-reveal>' + WATERMARK +
       '<figure class="spread__photo rv"><span class="ph ph--menu"><span class="ph__in">' +
         '<img src="' + src + '-800.webp" srcset="' + src + '-800.webp 800w, ' + src + '-1086.webp 1086w" sizes="(min-width: 900px) 470px, 100vw" width="1086" height="1448" alt="' + esc(PHOTO_ALT[b.photo] || '') + '" loading="lazy" decoding="async">' +
       '</span></span>' +
@@ -396,14 +407,28 @@
       const nav = $('[data-menu-cats="' + g + '"]');
       if (!panel || !nav) continue;
       let flip = false;
+      // each list ends the way their printed pages do: the service charge line, then the gold wordmark
       panel.innerHTML = spreadsFor(g).map((b) => { const h = spreadHTML(b, b.photo ? flip : false); if (b.photo) flip = !flip; return h; }).join('') +
-        '<p class="mnote" data-price-note>' + esc(W.info.priceNote) + '</p>';
+        '<div class="mend"><p class="mnote" data-price-note>' + esc(W.info.priceNote) + '</p>' +
+        '<p class="mend__mark" aria-hidden="true"><span>White</span><span>Coffee House</span></p></div>';
       nav.innerHTML = W.categories().filter((c) => groupOf(c) === g)
         .map((c) => '<a class="mcat-link" href="#cat-' + esc(c.id) + '" data-cat-link="' + esc(c.id) + '">' + esc(c.name) + '</a>').join('');
     }
     observeReveals(menuBook);
     spyActive = undefined;
+    syncCatEdges();
   }
+  /** The category strip scrolls sideways when it does not fit: fade the edge that has more behind it. */
+  function syncCatEdges() {
+    for (const nav of $$('[data-menu-cats]')) {
+      const max = nav.scrollWidth - nav.clientWidth;
+      nav.classList.toggle('more-r', max > 1 && nav.scrollLeft < max - 1);
+      nav.classList.toggle('more-l', max > 1 && nav.scrollLeft > 1);
+    }
+  }
+  for (const nav of $$('[data-menu-cats]')) nav.addEventListener('scroll', syncCatEdges, { passive: true });
+  window.addEventListener('resize', syncCatEdges);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(syncCatEdges);
   function renderMenu() {
     if (!menuBook || !GROUPS.length) return;
     const sig = structureSig();
@@ -438,6 +463,7 @@
     }
     for (const p of $$('[data-menu-panel]')) p.hidden = p.dataset.menuPanel !== g;
     for (const n of $$('[data-menu-cats]')) n.hidden = n.dataset.menuCats !== g;
+    syncCatEdges();
     spyActive = undefined;
     spyHold = null;
     if (opts.scroll && menuBook) {

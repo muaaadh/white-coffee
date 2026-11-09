@@ -26,7 +26,7 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600&family=Kalnia:wght@300;400;500&family=Poppins:wght@300;400;500;600&display=swap">
   <link rel="stylesheet" href="../assets/css/base.css">
   <link rel="stylesheet" href="karaoke.css">
-  <link rel="preload" as="image" href="../assets/img/karaoke/mic-amber-800.webp" imagesrcset="../assets/img/karaoke/mic-amber-800.webp 800w, ../assets/img/karaoke/mic-amber-1600.webp 1600w" imagesizes="(min-width: 960px) 40vw, 100vw">
+  <link rel="preload" as="image" href="../assets/img/karaoke/lounge-sofa-800.webp" imagesrcset="../assets/img/karaoke/lounge-sofa-800.webp 800w, ../assets/img/karaoke/lounge-sofa-1600.webp 1600w" imagesizes="(min-width: 960px) 42vw, 100vw">
   <script>document.documentElement.classList.add('js');</script>
   <script src="../assets/js/store.js" defer></script>
   <script src="karaoke.js" defer></script>
@@ -34,56 +34,67 @@
 <body class="kk">
   <a class="k-skip" href="#main">Skip to content</a>
 
-  <!-- ============ Header (same structure as the website) ============ -->
-  <header class="khdr" id="site-header">
-    <div class="khdr__inner">
-      <a class="kbrand" href="../" aria-label="White Coffee House, home">
-        <span class="kbrand__mark" aria-hidden="true"></span>
-        <span class="kbrand__name">White Coffee House</span>
+  <!-- ============ Header: the website's header (same markup, same breakpoints), dark ============ -->
+  <header class="hdr" id="site-header">
+    <div class="hdr__inner k-wrap">
+      <!-- The toggle comes before the nav in DOM and tab order, as on the website -->
+      <button class="nav-toggle" id="menu-btn" type="button" aria-expanded="false" aria-controls="menu-sheet" aria-label="Open navigation" data-menu-btn>
+        <span class="nav-toggle__bar" aria-hidden="true"></span><span class="nav-toggle__bar" aria-hidden="true"></span>
+      </button>
+
+      <a class="brand hdr__brand" href="../" aria-label="White Coffee House, home">
+        <span class="brand__mark k-foil" aria-hidden="true"></span>
+        <span class="brand__name">White Coffee House</span>
       </a>
 
-      <nav class="khdr__nav" aria-label="Main">
-        <ul class="khdr__list" role="list">
-          <li><a class="khdr__link" href="../#menu">Menu</a></li>
-          <li><a class="khdr__link" href="./" aria-current="page">Karaoke</a></li>
-          <li><a class="khdr__link" href="../#rewards">Rewards</a></li>
-          <li><a class="khdr__link" href="../#visit">Visit</a></li>
+      <nav class="hdr__nav" id="site-nav" aria-label="Main">
+        <ul class="hdr__list" role="list">
+          <li><a class="hdr__link" href="../#menu">Menu</a></li>
+          <li><a class="hdr__link is-active" href="./" aria-current="page">Karaoke</a></li>
+          <li><a class="hdr__link" href="../#rewards">Rewards</a></li>
+          <li><a class="hdr__link" href="../#visit">Visit</a></li>
         </ul>
       </nav>
 
-      <div class="khdr__actions">
-        <a class="kbtn kbtn--line kbtn--sm" href="../portal/">Customer portal</a>
-        <a class="kbtn kbtn--ivory kbtn--sm" href="../admin/">Admin portal</a>
-      </div>
-
-      <button class="khdr__toggle" type="button" aria-expanded="false" aria-controls="khdr-sheet" aria-label="Open navigation" data-menu-btn>
-        <span class="khdr__bar" aria-hidden="true"></span><span class="khdr__bar" aria-hidden="true"></span>
-      </button>
-    </div>
-
-    <div class="khdr__sheet" id="khdr-sheet" hidden data-menu-sheet>
-      <ul class="khdr__sheetlist" role="list">
-        <li><a href="../#menu">Menu</a></li>
-        <li><a href="./" aria-current="page">Karaoke</a></li>
-        <li><a href="../#rewards">Rewards</a></li>
-        <li><a href="../#visit">Visit</a></li>
-      </ul>
-      <div class="khdr__sheetbtns">
-        <a class="kbtn kbtn--line" href="../portal/">Customer portal</a>
-        <a class="kbtn kbtn--ivory" href="../admin/">Admin portal</a>
+      <div class="hdr__actions">
+        <a class="btn btn--ghost btn--sm hdr-btn" href="../portal/"><span>Customer<span class="hdr-btn__long"> portal</span></span></a>
+        <a class="btn btn--sm hdr-btn hdr-btn--dark" href="../admin/"><span>Admin<span class="hdr-btn__long"> portal</span></span></a>
       </div>
     </div>
   </header>
 
+  <!-- Mobile menu sheet (820px and below), as on the website -->
+  <div class="sheet" id="menu-sheet" data-menu-sheet>
+    <div class="sheet__inner k-wrap">
+      <nav class="sheet__nav" aria-label="Site menu">
+        <ul class="sheet__list" role="list">
+          <li><a class="sheet__link" href="../#menu">Menu</a></li>
+          <li><a class="sheet__link is-active" href="./" aria-current="page">Karaoke</a></li>
+          <li><a class="sheet__link" href="../#rewards">Rewards</a></li>
+          <li><a class="sheet__link" href="../#visit">Visit</a></li>
+        </ul>
+      </nav>
+      <div class="sheet__portals">
+        <a class="sheet__portal" href="../portal/">
+          <span class="sheet__portal-text"><strong>Customer portal</strong><span>Your White Rewards card and beans</span></span>
+        </a>
+        <a class="sheet__portal sheet__portal--dark" href="../admin/">
+          <span class="sheet__portal-text"><strong>Admin portal</strong><span>For the café team</span></span>
+        </a>
+      </div>
+      <p class="sheet__meta">Every day, 4&nbsp;PM to midnight, Hulhumalé</p>
+    </div>
+  </div>
+
   <main id="main">
-    <!-- ============ Intro: the leather cover ============ -->
+    <!-- ============ Intro: the leather cover, and the room ============ -->
     <section class="k-intro" aria-labelledby="k-title">
       <div class="k-wrap k-intro__grid">
         <div class="k-intro__text">
-          <span class="k-intro__mark" aria-hidden="true"></span>
+          <span class="k-intro__mark k-foil" aria-hidden="true"></span>
           <p class="k-intro__where">At White Coffee House, Hulhumalé</p>
           <h1 class="k-intro__title" id="k-title">Karaoke rooms</h1>
-          <p class="k-intro__lede">Three private rooms with a big screen, proper mics and the café menu on call. Book by the hour, any night from 4&nbsp;PM to midnight.</p>
+          <p class="k-intro__lede"><span data-k-count>Three private rooms</span> for birthdays, office nights and duets. Book by the hour and order from the café menu without leaving your room.</p>
           <div class="k-intro__cta">
             <a class="kbtn kbtn--gold" href="#book">Book a room</a>
             <a class="k-link" href="#find">Find my booking</a>
@@ -95,38 +106,33 @@
           </dl>
         </div>
         <figure class="k-intro__photo">
-          <img src="../assets/img/karaoke/mic-amber-800.webp"
-               srcset="../assets/img/karaoke/mic-amber-800.webp 800w, ../assets/img/karaoke/mic-amber-1600.webp 1600w"
-               sizes="(min-width: 960px) 40vw, 100vw" width="800" height="1200"
-               alt="A silver vintage microphone on a stand, warm lights glowing out of focus behind it" fetchpriority="high">
+          <img src="../assets/img/karaoke/lounge-sofa-800.webp"
+               srcset="../assets/img/karaoke/lounge-sofa-800.webp 800w, ../assets/img/karaoke/lounge-sofa-1600.webp 1600w"
+               sizes="(min-width: 960px) 42vw, 100vw" width="800" height="1200"
+               alt="A red tufted sofa in a dark room, lit by a warm hanging lamp" fetchpriority="high">
         </figure>
       </div>
     </section>
 
-    <!-- ============ The rooms, set like the printed menu ============ -->
+    <!-- ============ The rooms, set like a page of the printed menu ============ -->
     <section class="k-rooms" id="rooms" aria-labelledby="rooms-title">
-      <div class="k-wrap k-rooms__grid">
-        <figure class="k-rooms__photo">
-          <img src="../assets/img/karaoke/lounge-sofa-800.webp"
-               srcset="../assets/img/karaoke/lounge-sofa-800.webp 800w, ../assets/img/karaoke/lounge-sofa-1600.webp 1600w"
-               sizes="(min-width: 960px) 36vw, 100vw" width="800" height="1200" loading="lazy" decoding="async"
-               alt="A red velvet sofa in a dark room, lit by a warm hanging lamp">
-        </figure>
-        <div class="k-rooms__menu">
-          <h2 class="k-h2" id="rooms-title">The rooms</h2>
+      <div class="k-wrap">
+        <div class="k-rooms__page">
+          <span class="k-emblem k-foil" aria-hidden="true"></span>
+          <h2 class="k-h2 k-rooms__title" id="rooms-title">The rooms</h2>
           <div class="k-menuhead" aria-hidden="true"><span>Room</span><span>Fits</span><span>MVR an hour</span></div>
           <ul class="k-menu" role="list" id="k-roomlist">
             <li class="k-mrow">
               <div class="k-mrow__top"><h3 class="k-mrow__name">Cosy room</h3><span class="k-mrow__fit">6 people</span><span class="k-mrow__rate num">300</span></div>
-              <p class="k-mrow__blurb">For birthdays, catch-ups and duets. Sofa seating, one big screen.</p>
+              <p class="k-mrow__blurb">Sofa seating for up to 6. Good for birthdays and duets.</p>
             </li>
             <li class="k-mrow">
               <div class="k-mrow__top"><h3 class="k-mrow__name">Party room</h3><span class="k-mrow__fit">12 people</span><span class="k-mrow__rate num">500</span></div>
-              <p class="k-mrow__blurb">Room for the whole group, two mics, mood lighting and a proper sound system.</p>
+              <p class="k-mrow__blurb">Space for 12, for office nights and big birthdays.</p>
             </li>
             <li class="k-mrow">
               <div class="k-mrow__top"><h3 class="k-mrow__name">VIP room</h3><span class="k-mrow__fit">20 people</span><span class="k-mrow__rate num">800</span></div>
-              <p class="k-mrow__blurb">Our largest room, with a private service bell and the best sound in the house.</p>
+              <p class="k-mrow__blurb">Our biggest room, up to 20 people.</p>
             </li>
           </ul>
           <p class="k-foot">Prices are per room, per hour. Pay at the café. All prices are subject to 10% service charge and 8% GST.</p>
@@ -149,6 +155,7 @@
 
             <div class="k-group" role="group" aria-labelledby="lbl-date">
               <div class="k-group__head"><h3 class="k-group__label" id="lbl-date">Date</h3><span class="k-group__val" id="v-date"></span></div>
+              <p class="k-note" id="n-date" aria-live="polite"></p>
               <div class="k-dates" id="k-dates"></div>
               <div class="k-more">
                 <label class="k-more__label" for="f-date">More dates</label>
@@ -241,14 +248,12 @@
       </div>
     </section>
 
-    <!-- ============ Find my booking ============ -->
-    <section class="k-find" id="find" aria-labelledby="find-title">
-      <div class="k-wrap k-find__grid">
-        <div class="k-find__intro">
+    <!-- ============ Find my booking + house rules, side by side ============ -->
+    <div class="k-after">
+      <div class="k-wrap k-after__grid">
+        <section class="k-find" id="find" aria-labelledby="find-title">
           <h2 class="k-h2" id="find-title">Find my booking</h2>
-          <p>Enter the reference from your confirmation and the phone number you booked with. You can cancel from here.</p>
-        </div>
-        <div class="k-find__main">
+          <p class="k-find__lede">Enter the reference from your confirmation and the phone number you booked with. You can cancel from here.</p>
           <form class="k-findform" id="k-findform" novalidate>
             <div class="k-field">
               <label for="f-ref">Reference</label>
@@ -267,14 +272,9 @@
           </form>
           <p class="k-err k-find__err" id="k-finderr" role="alert"></p>
           <div class="k-found" id="k-found" tabindex="-1"></div>
-        </div>
-      </div>
-    </section>
+        </section>
 
-    <!-- ============ House rules ============ -->
-    <section class="k-rules" id="rules" aria-labelledby="rules-title">
-      <div class="k-wrap k-rules__grid">
-        <div class="k-rules__text">
+        <section class="k-rules" id="rules" aria-labelledby="rules-title">
           <h2 class="k-h2" id="rules-title">House rules</h2>
           <ul class="k-rules__list" role="list">
             <li>Arrive 10 minutes early so we can get your room ready.</li>
@@ -284,26 +284,20 @@
             <li>Cancel online any time before your start time, here or in the customer portal.</li>
           </ul>
           <p class="k-rules__menu"><a class="k-link" href="../#menu">See the café menu</a></p>
-        </div>
-        <figure class="k-rules__photo">
-          <img src="../assets/img/karaoke/mic-lights-800.webp"
-               srcset="../assets/img/karaoke/mic-lights-800.webp 800w, ../assets/img/karaoke/mic-lights-1600.webp 1600w"
-               sizes="(min-width: 960px) 50vw, 100vw" width="800" height="534" loading="lazy" decoding="async"
-               alt="A microphone on a stand in front of strings of warm lights">
-        </figure>
+        </section>
       </div>
-    </section>
+    </div>
   </main>
 
-  <!-- ============ Footer (same structure as the website) ============ -->
+  <!-- ============ Footer: the website's footer (leather, the back cover) ============ -->
   <footer class="kfoot">
     <div class="k-wrap kfoot__top">
       <div class="kfoot__brand">
-        <a class="kbrand" href="../" aria-label="White Coffee House, home">
-          <span class="kbrand__mark" aria-hidden="true"></span>
-          <span class="kbrand__name">White Coffee House</span>
+        <a class="brand" href="../" aria-label="White Coffee House, home">
+          <span class="kfoot__mark k-foil" aria-hidden="true"></span>
+          <span class="brand__name">White Coffee House</span>
         </a>
-        <p class="kfoot__tag">Good coffee. Great food. Better vibes.</p>
+        <p class="kfoot__tag"><span>Good coffee.</span> <span>Great food.</span> <span>Better vibes.</span></p>
         <p class="kfoot__where">Hulhumalé, Maldives. Every day, 4&nbsp;PM to midnight.</p>
       </div>
       <nav class="kfoot__nav" aria-label="Footer">
@@ -321,6 +315,7 @@
           <ul role="list">
             <li><a href="../portal/">Customer portal</a></li>
             <li><a href="../admin/">Admin portal</a></li>
+            <li><a href="#book">Book karaoke</a></li>
           </ul>
         </div>
         <div class="kfcol">
@@ -332,6 +327,7 @@
         </div>
       </nav>
     </div>
+    <div class="k-wrap kfoot__wordmark" aria-hidden="true"><span class="kfoot__word">White Coffee House</span></div>
     <div class="k-wrap">
       <div class="kfoot__base">
         <p>© 2026 White Coffee House</p>

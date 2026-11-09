@@ -76,9 +76,6 @@ html.menu-locked { overflow: hidden; }
 .status-pill.is-open .status-pill__dot { background: var(--ok); }
 .status-pill.is-closed .status-pill__dot { background: var(--gold); }
 
-.hero__status { margin-top: clamp(1.1rem, 2.4vh, 1.5rem); }
-.js .hero__status { animation: wch-rise .9s var(--ease-out) .65s both; }
-@keyframes wch-rise { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
 
 /* ---------------------------------------------------------------- Header */
 .hdr {
@@ -342,7 +339,7 @@ html.hdr-hidden .mbar { top: 0; }
 .mtab {
   position: relative; display: inline-flex; align-items: center; min-height: 60px; padding: 0 .1rem;
   border: 0; background: none; border-radius: 0;
-  font-family: var(--font-display); font-size: 1.5rem; line-height: 1; color: var(--faint);
+  font-family: var(--font-display); font-size: 1.5rem; line-height: 1; color: var(--muted);
   transition: color .2s var(--ease-out);
 }
 .mtab::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; background: var(--gold); transform: scaleX(0); transition: transform .35s var(--ease-out); }
@@ -357,6 +354,10 @@ html.hdr-hidden .mbar { top: 0; }
 }
 .mbar__cats::-webkit-scrollbar { display: none; }
 .mbar__cats[hidden] { display: none; }
+/* when the strip does not fit, the edge with more categories behind it fades (site.js sets more-l / more-r) */
+.mbar__cats.more-r { -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 64px), transparent); mask-image: linear-gradient(90deg, #000 calc(100% - 64px), transparent); }
+.mbar__cats.more-l { -webkit-mask-image: linear-gradient(90deg, transparent, #000 64px); mask-image: linear-gradient(90deg, transparent, #000 64px); }
+.mbar__cats.more-l.more-r { -webkit-mask-image: linear-gradient(90deg, transparent, #000 64px, #000 calc(100% - 64px), transparent); mask-image: linear-gradient(90deg, transparent, #000 64px, #000 calc(100% - 64px), transparent); }
 .mcat-link {
   position: relative; flex: none; display: inline-flex; align-items: center; min-height: 44px; padding: 0 .7rem;
   font-size: .875rem; font-weight: 500; color: var(--muted); text-decoration: none; white-space: nowrap; border-radius: var(--r-sm);
@@ -367,6 +368,12 @@ html.hdr-hidden .mbar { top: 0; }
 .mcat-link.is-active { color: var(--espresso); }
 .mcat-link.is-active::after { transform: scaleX(1); }
 .mcat-link:focus-visible { outline-offset: -2px; }
+@media (min-width: 700px) and (max-width: 1180px) {
+  .mbar__tabs { gap: 1.25rem; padding-right: 1.1rem; margin-right: .4rem; }
+  .mbar__cats { gap: 0; }
+  .mcat-link { padding-inline: .5rem; }
+  .mcat-link::after { left: .5rem; right: .5rem; }
+}
 
 @media (max-width: 699px) {
   .mbar__inner { flex-direction: column; padding-inline: 0; }
@@ -380,12 +387,23 @@ html.hdr-hidden .mbar { top: 0; }
 .mpanel:focus-visible { outline-offset: -2px; }
 .mpanel[hidden] { display: none; }
 
+/* a spread is one page of their printed menu. overflow-y: clip (not hidden) trims the watermark at the page edge
+   without making the spread a scroll container, so the photo still sticks; x stays visible for the full-bleed
+   photo on phones. */
 .spread {
+  position: relative; isolation: isolate; overflow-x: visible; overflow-y: clip;
   display: grid; grid-template-columns: repeat(12, minmax(0, 1fr));
   column-gap: clamp(1rem, 2vw, 2rem); align-items: start;
   padding-block: clamp(3.5rem, 2.25rem + 4vw, 6.5rem);
 }
 .spread + .spread { border-top: 1px solid var(--line); }
+.spread__w {
+  position: absolute; z-index: -1; bottom: -.24em; left: 22%;
+  font-family: var(--font-display); font-weight: 300; font-size: clamp(17rem, 9rem + 24vw, 36rem); line-height: 1;
+  color: var(--gold); opacity: .07; pointer-events: none; user-select: none;
+}
+.spread--flip .spread__w { left: auto; right: 6%; }
+.spread--text .spread__w { left: auto; right: 8%; }
 .spread__list { grid-column: 1 / span 6; grid-row: 1; }
 .spread__photo {
   grid-column: 8 / span 5; grid-row: 1; margin: 0;
@@ -401,19 +419,26 @@ html.hdr-hidden .spread__photo { top: calc(var(--mbar-h) + 2rem); }
 
 .spread--text .spread__cols { grid-column: 1 / -1; columns: 2; column-gap: clamp(2.5rem, 2rem + 5vw, 8rem); }
 .spread--text .mcat { break-inside: avoid; }
+/* one category on its own (Soft drinks) runs the full width; only its items split in two */
+.spread--single .spread__cols { columns: 1; }
 .spread--single .mcat__items { columns: 2; column-gap: clamp(2.5rem, 2rem + 5vw, 8rem); }
 .spread--single .mi { break-inside: avoid; }
 
 /* html's scroll-padding-top (base.css) already clears the header + 16px; add the sticky bar */
 .mcat { scroll-margin-top: var(--mbar-h); }
-.mcat + .mcat { margin-top: clamp(3rem, 2.25rem + 2.5vw, 4.5rem); }
-.spread--text .mcat + .mcat { margin-top: 0; }
+/* sections on the same page are divided by a gold rule, as in print */
+.spread__list .mcat + .mcat { margin-top: clamp(2.75rem, 2rem + 2.5vw, 4rem); padding-top: clamp(2.75rem, 2rem + 2.5vw, 4rem); border-top: 1px solid var(--gold-300); }
 .spread--text .mcat:not(:last-child) { padding-bottom: clamp(3rem, 2.25rem + 2.5vw, 4.5rem); }
+/* the emblem over a centred heading, as on every page of their printed menu */
 .mcat__title {
-  font-family: var(--font-display); font-weight: 400;
+  font-family: var(--font-display); font-weight: 400; text-align: center;
   font-size: clamp(1.875rem, 1.5rem + 1.3vw, 2.625rem); line-height: 1.1; letter-spacing: -0.01em;
   color: var(--espresso);
-  padding-bottom: .9rem; margin-bottom: .6rem; border-bottom: 1px solid var(--gold-300);
+  margin-bottom: clamp(1.1rem, .9rem + .8vw, 1.6rem);
+}
+.mcat__title::before {
+  content: ""; display: block; width: 36px; height: 36px; margin: 0 auto clamp(.9rem, .75rem + .4vw, 1.2rem);
+  background: url("../img/logo-mark.svg") center / contain no-repeat;
 }
 .mcat__items { display: block; }
 .mi { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 1.25rem; align-items: baseline; padding-block: .62rem; }
@@ -424,8 +449,13 @@ html.hdr-hidden .spread__photo { top: calc(var(--mbar-h) + 2rem); }
 .mi__out { grid-column: 1 / -1; margin-top: .2rem; font-size: var(--fs-xs); font-weight: 600; color: var(--bad); }
 .mi.is-out .mi__name { color: var(--faint); }
 .mi.is-out .mi__price { color: var(--faint); text-decoration: line-through; text-decoration-thickness: 1px; }
-.mnote { padding-top: 2rem; border-top: 1px solid var(--line); font-size: var(--fs-sm); color: var(--muted); }
+.mnote { font-size: var(--fs-sm); color: var(--muted); }
 .mpanel .spread:last-of-type { padding-bottom: clamp(3rem, 2rem + 3vw, 5rem); }
+/* the foot of each list: service charge line, then the gold wordmark that closes their printed pages */
+.mend { display: grid; justify-items: center; gap: clamp(1.75rem, 1.25rem + 1.5vw, 2.5rem); padding-top: clamp(2rem, 1.5rem + 1.5vw, 3rem); border-top: 1px solid var(--line); text-align: center; }
+.mend__mark { display: grid; justify-items: center; font-family: var(--font-mark); font-weight: 600; text-transform: uppercase; line-height: 1.12; letter-spacing: .03em; color: var(--gold); }
+.mend__mark span:first-child { font-size: 1rem; }
+.mend__mark span:last-child { font-size: 1.375rem; }
 
 @media (max-width: 1100px) {
   .spread__list { grid-column: 1 / span 7; }
@@ -447,10 +477,13 @@ html.hdr-hidden .spread__photo { top: calc(var(--mbar-h) + 2rem); }
   .spread--single .mcat__items { columns: 1; }
   .mi__name { font-size: 1.1875rem; }
   .mcat__title { font-size: 2rem; }
+  .spread__w, .spread--flip .spread__w, .spread--text .spread__w { left: auto; right: 0; font-size: 15rem; }
 }
 
 /* ---------------------------------------------------------------- Karaoke (leather) */
-.karaoke { padding-block: var(--section); }
+/* A jump to #karaoke lands the band flush at the top: with the usual header clearance it stopped inside the end of the
+   menu, where the sticky Food / Drinks bar was still pinned over the band. The band's own padding clears the header. */
+.karaoke { padding-block: var(--section); scroll-margin-top: calc(-1 * (var(--header-h) + 16px)); }
 .karaoke__grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: clamp(1rem, 2vw, 2rem); align-items: start; }
 .karaoke__head { grid-column: 1 / span 5; display: grid; justify-items: start; gap: 1.4rem; }
 .karaoke__title {
@@ -465,7 +498,7 @@ html.hdr-hidden .spread__photo { top: calc(var(--mbar-h) + 2rem); }
 .karaoke__rooms { grid-column: 7 / span 6; }
 .karaoke__photo { justify-self: stretch; margin: 1.1rem 0 0; }
 .ph--karaoke { aspect-ratio: 4 / 3; background: var(--leather-deep); }
-.ph--karaoke img { object-position: 50% 42%; }
+.ph--karaoke img { object-position: 50% 62%; }
 
 .rooms { border-top: 1px solid rgba(242, 185, 65, .38); }
 .room { display: grid; gap: .5rem; padding-block: clamp(1.6rem, 1.3rem + 1vw, 2.25rem); border-bottom: 1px solid rgba(242, 185, 65, .38); }
@@ -550,37 +583,41 @@ html.hdr-hidden .spread__photo { top: calc(var(--mbar-h) + 2rem); }
   padding-top: var(--section);
   background: linear-gradient(var(--line), var(--line)) 50% 0 / calc(100% - 2 * var(--gutter)) 1px no-repeat;
 }
-.space__arch { grid-column: 1 / span 5; grid-row: 1 / span 2; }
-.space__copy { grid-column: 7 / span 5; grid-row: 1; align-self: end; display: grid; gap: 1.25rem; padding-top: clamp(1rem, 4vw, 4rem); }
-.space__inside { grid-column: 7 / span 6; grid-row: 2; }
-.space__lede { font-size: clamp(1.125rem, 1rem + .4vw, 1.3125rem); line-height: 1.6; color: var(--roast); }
-.space__text { color: var(--muted); max-width: 30rem; }
+/* outside (copy + the storefront drawing), then inside (the counter + one line) */
+.space__copy { grid-column: 1 / span 5; grid-row: 1; align-self: center; display: grid; gap: 1.5rem; }
+.space__facade { grid-column: 7 / span 6; grid-row: 1; justify-self: center; width: min(100%, 480px); margin: 0; }
+.space__inside { grid-column: 1 / span 7; grid-row: 2; }
+.space__text { grid-column: 9 / span 4; grid-row: 2; align-self: center; }
+.space__lede { font-size: clamp(1.125rem, 1rem + .4vw, 1.3125rem); line-height: 1.6; color: var(--roast); max-width: 30rem; }
+.space__text p { font-size: 1.0625rem; line-height: 1.7; color: var(--roast); max-width: 24rem; padding-top: 1.25rem; border-top: 1px solid var(--gold-300); }
 
-/* the one arch on the page: storefront photo + a thin gold-ink outline 10px out */
-.arch { position: relative; padding: 10px 10px 0; }
-.arch::before {
-  content: ""; position: absolute; inset: 0; pointer-events: none;
-  border: 1px solid var(--gold); border-bottom: 0; border-radius: 999px 999px 0 0;
-  opacity: .55;
-}
-.ph--arch { aspect-ratio: 4 / 5; border-radius: 999px 999px 0 0; }
+/* the storefront, drawn in gold line from their description: no photo of someone else's building */
+.facade { display: block; width: 100%; height: auto; overflow: visible; color: var(--gold); }
+.facade .facade__glass { fill: #FBF3E2; }
+.facade .facade__lamp { fill: #F6DFA6; }
+.facade__word { font-family: var(--font-mark); font-weight: 600; font-size: 18px; letter-spacing: 3.2px; fill: var(--gold-ink); }
 .ph--inside { aspect-ratio: 4 / 3; }
 
 @media (max-width: 899px) {
   .space__grid { grid-template-columns: minmax(0, 1fr); }
-  .space__copy { grid-column: 1; grid-row: 1; padding-top: 0; }
-  .space__arch { grid-column: 1; grid-row: 2; width: min(100%, 440px); justify-self: center; }
-  .space__inside { grid-column: 1; grid-row: 3; }
+  .space__copy, .space__facade, .space__inside, .space__text { grid-column: 1; grid-row: auto; }
+  .space__facade { width: min(100%, 400px); }
+  .space__text { align-self: start; }
 }
 
 /* ---------------------------------------------------------------- Visit (stone band) */
 .visit { padding-block: var(--section); background: var(--cream); }
 .visit__grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: clamp(1rem, 2vw, 2rem); row-gap: 3rem; align-items: start; }
-.visit__info { grid-column: 1 / span 6; display: grid; justify-items: start; gap: 1.5rem; }
-.visit__hours { grid-column: 8 / span 5; }
+.visit__info { grid-column: 1 / span 5; display: grid; justify-items: start; gap: 1.5rem; }
+.visit__side { grid-column: 7 / span 6; align-self: end; }
 .visit__status .status-pill { font-size: 1rem; color: var(--espresso); }
+.visit__when { display: grid; justify-items: start; gap: .55rem; }
+/* Poppins, like the menu prices: Kalnia's 4 reads as a 1 at this size */
+.visit__hours { font-size: clamp(1.25rem, 1.1rem + .5vw, 1.5rem); font-weight: 500; line-height: 1.35; color: var(--espresso); }
+.visit__hours[hidden] { display: none; }
+.visit__hours-note { font-size: var(--fs-sm); color: var(--muted); }
 
-.visit__facts { margin: .5rem 0 0; width: 100%; max-width: 32rem; border-top: 1px solid var(--line-strong); }
+.visit__facts { margin: 0; width: 100%; border-top: 1px solid var(--line-strong); }
 .vfact { display: grid; grid-template-columns: 7rem minmax(0, 1fr); gap: .25rem 1rem; padding-block: 1.1rem; border-bottom: 1px solid var(--line-strong); }
 .vfact dt { padding-top: .1rem; font-size: var(--fs-sm); font-weight: 500; color: var(--gold-ink); }
 .vfact dd { margin: 0; display: grid; justify-items: start; gap: .15rem; color: var(--espresso); }
@@ -591,10 +628,8 @@ html.hdr-hidden .spread__photo { top: calc(var(--mbar-h) + 2rem); }
 .social__handle { font-size: var(--fs-sm); color: var(--muted); }
 .social:hover .social__name { text-underline-offset: 3px; }
 
-.hours { width: 100%; border-collapse: collapse; }
-.hours__cap { caption-side: top; display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: .25rem 1rem; padding-bottom: 1rem; text-align: left; }
-.hours__title { flex: none; font-family: var(--font-display); font-size: clamp(1.625rem, 1.4rem + .7vw, 2rem); line-height: 1.1; color: var(--espresso); }
-.hours__note { font-size: var(--fs-sm); color: var(--muted); }
+.hours { width: min(100%, 26rem); border-collapse: collapse; }
+.hours[hidden] { display: none; }
 .hours th, .hours td { padding: .8rem 0; border-top: 1px solid var(--line-strong); text-align: left; font-weight: 400; font-size: 1rem; color: var(--roast); }
 .hours tr:last-child > * { border-bottom: 1px solid var(--line-strong); }
 .hours td { text-align: right; white-space: nowrap; }
@@ -603,8 +638,8 @@ html.hdr-hidden .spread__photo { top: calc(var(--mbar-h) + 2rem); }
 .hours__today { margin-left: .6rem; font-size: var(--fs-xs); font-weight: 500; color: var(--gold-ink); }
 
 @media (max-width: 899px) {
-  .visit__info { grid-column: 1 / -1; }
-  .visit__hours { grid-column: 1 / -1; max-width: 32rem; width: 100%; }
+  .visit__info, .visit__side { grid-column: 1 / -1; }
+  .visit__side { max-width: 34rem; }
 }
 @media (max-width: 420px) {
   .vfact { grid-template-columns: minmax(0, 1fr); }
@@ -665,7 +700,6 @@ html.hdr-hidden .spread__photo { top: calc(var(--mbar-h) + 2rem); }
   .js [data-reveal] .ph img, .js [data-reveal] .specials__img { transform: none !important; }
   .ph__in { transform: none !important; }
   .js .intro__statement.is-ready .wf { opacity: 1; }
-  .js .hero__status { animation: none; }
   .sheet__list > li, .sheet__portals, .sheet__meta { opacity: 1 !important; transform: none !important; }
   .hdr.is-hidden { transform: none; }
   html.hdr-hidden .mbar { top: var(--header-h); }

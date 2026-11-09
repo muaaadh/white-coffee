@@ -29,6 +29,7 @@
   /* ------------------------------------------------------------------ */
   var S = {
     date: W.karaokeToday(),
+    dateChosen: false,     // guest picked a date or a time: never move the date for them
     roomId: null,
     guests: 4,
     start: null,
@@ -64,6 +65,8 @@
   function slotAt(h) { var r = room(); if (!r) return null; return slots(S.date, r.id).filter(function (s) { return s.hour === h; })[0] || null; }
   function maxHours(start) { var r = room(); return r ? W.karaokeMaxHours(S.date, r.id, start) : 0; }
   function maxGuests() { return rooms().reduce(function (m, r) { return Math.max(m, r.capacity); }, 1); }
+  /** Every start time on this date has gone (only ever true for today, late at night). */
+  function nightOver(date) { var r = W.karaokeRooms(true)[0]; return !!r && slots(date, r.id).every(function (s) { return s.past; }); }
   function smallestFit(n) { return rooms().filter(function (r) { return r.capacity >= n; }).sort(function (a, b) { return a.capacity - b.capacity; })[0] || null; }
   function startTs(date, hour) { var a = date.split('-'); return Date.UTC(+a[0], +a[1] - 1, +a[2], hour) - 5 * 36e5; }
   function validDate(key) { return /^\d{4}-\d{2}-\d{2}$/.test(key || '') && key >= today() && key <= lastDay(); }
@@ -101,29 +104,40 @@
   /* ------------------------------------------------------------------ */
   function reconcile(why) {
     if (!validDate(S.date)) S.date = S.date < today() ? today() : lastDay();
+    // After the last start time tonight, open on tomorrow instead of a grid of "Past".
+    if (!S.dateChosen && S.start == null && S.date === today() && nightOver(today())) S.date = W.karaokeAddDays(today(), 1);
 
     var mg = maxGuests();
     if (S.guests > mg) S.guests = mg;
     if (S.guests < 1) S.guests = 1;
 
-    var r = room();
-    if (!r || !r.active) { var alt0 = smallestFit(S.guests); S.roomId = alt0 ? alt0.id : null; r = room(); }
+    var r = room(), moved = false;
+    if (!r || !r.active) {
+      var was = r, alt0 = smallestFit(S.guests);
+      S.roomId = alt0 ? alt0.id : null; r = room();
+      if (was && why !== 'init') {          // staff paused the room the guest had picked: say so
+        S.noteRoom = alt0 ? 'The ' + was.name + ' just stopped taking bookings, so we moved you to the ' + alt0.name + '.'
+                          : 'The ' + was.name + ' just stopped taking bookings, and no other room fits ' + S.guests + '. Talk to us at the café.';
+        moved = true;
+      }
+    }
     if (r && r.capacity < S.guests) {
       var alt = smallestFit(S.guests);
-      if (alt) { S.noteRoom = 'The ' + r.name + ' fits up to ' + r.capacity + ', so we moved you to the ' + alt.name + '.'; S.roomId = alt.id; r = alt; }
+      if (alt) { S.noteRoom = 'The ' + r.name + ' fits up to ' + r.capacity + ', so we moved you to the ' + alt.name + '.'; S.roomId = alt.id; r = alt; moved = true; }
     }
 
+    var remote = why !== 'user' && why !== 'init' && !moved;   // the change came from another tab, not from this guest
     if (S.start != null && r) {
       var s = slotAt(S.start);
       if (!s || !s.free) {
         if (s && s.past) S.noteTime = clock(S.start) + ' has passed. Pick a later time.';
-        else if (why !== 'user' && why !== 'init') S.noteTime = 'Someone just booked ' + clock(S.start) + ' in the ' + r.name + '. Pick another time.';
+        else if (remote) S.noteTime = 'Someone just booked ' + clock(S.start) + ' in the ' + r.name + '. Pick another time.';
         else S.noteTime = clock(S.start) + ' is already booked in the ' + r.name + '. Pick another time.';
         S.flashHour = S.start; S.start = null; S.hours = null;
       } else {
         var mx = maxHours(S.start);
         if (S.hours && S.hours > mx) {
-          S.noteTime = (why !== 'user' && why !== 'init' ? 'Someone just booked the ' + r.name + ' from ' : 'The ' + r.name + ' is booked from ') + clock(S.start + mx) + ', so your booking is now ' + plural(mx, 'hour') + '.';
+          S.noteTime = (remote ? 'Someone just booked the ' + r.name + ' from ' : 'The ' + r.name + ' is booked from ') + clock(S.start + mx) + ', so your booking is now ' + plural(mx, 'hour') + '.';
           S.hours = mx;
         }
         if (!S.hours) S.hours = Math.min(2, mx);
@@ -135,6 +149,7 @@
   /* Render                                                              */
   /* ------------------------------------------------------------------ */
   function render() {
+    renderCount();
     renderRoomList();
     renderDates();
     renderRooms();
@@ -146,6 +161,12 @@
     renderDone();
     renderFound();
     renderBar();
+  }
+
+  var WORDS = ['Our', 'One', 'Two', 'Three', 'Four', 'Five', 'Six'];
+  function renderCount() {
+    var n = rooms().length, t = (WORDS[n] || String(n)) + ' private room' + (n === 1 ? '' : 's');
+    $$('[data-k-count]').forEach(function (el) { if (el.textContent !== t) el.textContent = t; });
   }
 
   function renderRoomList() {
@@ -181,6 +202,8 @@
     if (doc.activeElement !== inp) inp.value = inStrip ? '' : S.date;
     inp.classList.toggle('is-active', !inStrip);
     $('#v-date').textContent = (S.date === t ? 'Today, ' : '') + dayLabel(S.date);
+    var nd = !S.dateChosen && S.date === W.karaokeAddDays(t, 1) && nightOver(t) ? 'The last start time tonight has passed, so this shows tomorrow.' : '';
+    var ne = $('#n-date'); if (ne.textContent !== nd) ne.textContent = nd;
   }
 
   function renderRooms() {
@@ -190,8 +213,9 @@
     $('[data-guests="1"]').disabled = g >= mg;
     var html = rooms().map(function (r) {
       var fits = r.capacity >= g, on = r.id === S.roomId;
-      var free = slots(S.date, r.id).filter(function (s) { return s.free; }).length;
-      var av = !fits ? 'Too small for ' + g : free ? plural(free, 'hour') + ' free' : 'Full on this date';
+      var sl = slots(S.date, r.id), free = sl.filter(function (s) { return s.free; }).length;
+      var av = !fits ? 'Too small for ' + g : free ? plural(free, 'hour') + ' free'
+             : sl.every(function (s) { return s.past; }) ? 'No times left today' : 'Full on this date';
       return '<button type="button" class="k-opt" data-room="' + esc(r.id) + '" data-key="r-' + esc(r.id) + '" aria-pressed="' + on + '"' + (fits ? '' : ' disabled') + '>' +
         '<span class="k-opt__name">' + esc(r.name) + '</span>' +
         '<span class="k-opt__meta"><span>Up to ' + r.capacity + ' people</span><span>' + money(r.rate) + ' an hour</span></span>' +
@@ -206,7 +230,8 @@
 
   function renderGrid() {
     var r = room(), grid = $('#k-grid');
-    $('#n-time').textContent = S.noteTime;
+    var over = r && !S.noteTime && nightOver(S.date) ? 'The last start time tonight has passed. Pick another day.' : '';
+    $('#n-time').textContent = S.noteTime || over;
     if (!r) { swap(grid, '<p class="k-hint">Pick a room to see free times.</p>'); $('#v-time').textContent = ''; return; }
     var end = S.start != null && S.hours ? S.start + S.hours : null;
     var html = slots(S.date, r.id).map(function (s) {
@@ -292,7 +317,8 @@
     else html = '<strong>' + esc(r.name) + ', ' + esc(dayLabel(S.date)) + '</strong>' + clock(S.start) + ' to ' + clock(S.start + S.hours) + ', <b>' + money(r.rate * S.hours) + '</b>';
     if (line.innerHTML !== html) line.innerHTML = html;
     var ready = !Object.keys(errors()).length;
-    btn.textContent = ready ? 'Book the room' : 'Continue';
+    var lab = ready ? 'Book the room' : 'Continue';
+    if (btn.textContent !== lab) btn.textContent = lab;
     barVisibility();
   }
   var barRaf = 0;
@@ -339,10 +365,15 @@
     put('name', '#f-name', S.tried || S.touched.name);
     put('phone', '#f-phone', S.tried || S.touched.phone);
     put('email', '#f-email', S.tried || S.touched.email);
-    if (S.tried && !Object.keys(e).length && $('#k-formerr').dataset.kind === 'check') setFormError('');
+    if (S.tried && $('#k-formerr').dataset.kind === 'check') setFormError(summary(e), 'check');   // keep it in step with the fields
     return e;
   }
-  function setFormError(msg, kind) { var el = $('#k-formerr'); el.textContent = msg; el.dataset.kind = msg ? (kind || '') : ''; }
+  var LABELS = { room: 'room', time: 'start time', hours: 'how long', name: 'name', phone: 'phone', email: 'email' };
+  function summary(e) {
+    var keys = Object.keys(e);
+    return !keys.length ? '' : keys.length === 1 ? e[keys[0]] : 'A few things to fix above: ' + keys.map(function (k) { return LABELS[k]; }).join(', ') + '.';
+  }
+  function setFormError(msg, kind) { var el = $('#k-formerr'); if (el.textContent !== msg) el.textContent = msg; el.dataset.kind = msg ? (kind || '') : ''; }
 
   /* ------------------------------------------------------------------ */
   /* Receipt (confirmation + find-my-booking)                            */
@@ -386,7 +417,7 @@
 
     var acts = [];
     if (st === 'confirmed' || st === 'checked-in') acts.push('<button type="button" class="kbtn kbtn--gold" data-act="ics" data-id="' + esc(b.id) + '" data-key="ics-' + ctx + '">Add to calendar</button>');
-    acts.push('<a class="kbtn kbtn--line" href="../portal/">Manage in the customer portal</a>');
+    acts.push('<a class="kbtn kbtn--line" href="../portal/#karaoke">Manage in the customer portal</a>');
     if (canCancel(b) && !S.ask[ctx]) acts.push('<button type="button" class="k-link" data-act="ask" data-ctx="' + ctx + '" data-key="ask-' + ctx + '">Cancel booking</button>');
     if (fresh) acts.push('<button type="button" class="k-link k-link--quiet" data-act="again" data-key="again">Book another room</button>');
     html += '<div class="k-rcpt__actions">' + acts.join('') + '</div>';
@@ -453,9 +484,9 @@
       if (r && r.active) { S.roomId = r.id; if (!q.get('guests') && S.guests > r.capacity) S.guests = Math.min(S.guests, r.capacity); }
     }
     var d = q.get('date');
-    if (d) { if (validDate(d)) S.date = d; else note = d < today() ? 'That date has passed, so we picked today.' : 'Online booking opens ' + R.daysAhead + ' days ahead, so we picked today.'; }
+    if (d) { if (validDate(d)) { S.date = d; S.dateChosen = true; } else note = d < today() ? 'That date has passed, so we picked the first date you can book.' : 'Online booking opens ' + R.daysAhead + ' days ahead, so we picked the first date you can book.'; }
     var st = parseInt(q.get('start'), 10);
-    if (st >= R.open && st < R.close) { S.start = st; var hh = parseInt(q.get('hours'), 10); if (hh >= 1) S.hours = hh; }
+    if (st >= R.open && st < R.close) { S.start = st; S.dateChosen = true; var hh = parseInt(q.get('hours'), 10); if (hh >= 1) S.hours = hh; }
     if (note) $('#e-date').textContent = note;
     return q;
   }
@@ -476,14 +507,14 @@
 
   $('#k-dates').addEventListener('click', function (e) {
     var b = e.target.closest('[data-date]'); if (!b) return;
-    S.date = b.getAttribute('data-date'); S.noteTime = ''; S.noteRoom = ''; $('#e-date').textContent = '';
+    S.date = b.getAttribute('data-date'); S.dateChosen = true; S.noteTime = ''; S.noteRoom = ''; $('#e-date').textContent = '';
     changed(true);
   });
   $('#f-date').addEventListener('change', function () {
     var v = this.value, err = $('#e-date');
     if (!v) return;
     if (!validDate(v)) { err.textContent = 'Pick a date from ' + dayLabel(today()) + ' to ' + dayLabel(lastDay()) + '.'; return; }
-    err.textContent = ''; S.date = v; S.noteTime = ''; S.noteRoom = '';
+    err.textContent = ''; S.date = v; S.dateChosen = true; S.noteTime = ''; S.noteRoom = '';
     changed(true);
   });
   $('.k-step').addEventListener('click', function (e) {
@@ -498,7 +529,7 @@
   });
   $('#k-grid').addEventListener('click', function (e) {
     var b = e.target.closest('[data-hour]'); if (!b || b.disabled) return;
-    var h = +b.getAttribute('data-hour'); S.noteTime = '';
+    var h = +b.getAttribute('data-hour'); S.noteTime = ''; S.dateChosen = true;
     if (S.start !== h) { S.start = h; var mx = maxHours(h); S.hours = Math.min(S.hours || 2, mx) || Math.min(2, mx); }
     changed(false);
   });
@@ -534,7 +565,7 @@
     reconcile('user'); render();
     var errs = errors(), keys = Object.keys(errs);
     if (keys.length) {
-      setFormError(keys.length === 1 ? errs[keys[0]] : 'A few things to fix above: ' + keys.map(function (k) { return { room: 'room', time: 'start time', hours: 'how long', name: 'name', phone: 'phone', email: 'email' }[k]; }).join(', ') + '.', 'check');
+      setFormError(summary(errs), 'check');
       var first = { room: '#k-opts .k-opt:not([disabled])', time: '#k-grid .k-slot:not([disabled])', hours: '#k-hours .k-hr:not([disabled])', name: '#f-name', phone: '#f-phone', email: '#f-email' }[keys[0]];
       var el = $(first); if (el) { el.focus({ preventScroll: true }); el.scrollIntoView({ behavior: smooth(), block: 'center' }); }
       return;
@@ -659,18 +690,45 @@
   }
 
   /* ------------------------------------------------------------------ */
-  /* Header (mobile sheet)                                               */
+  /* Header: the website's mobile sheet (site.js), same behaviour:       */
+  /* focus moves in, Tab is trapped, the page behind is inert and does   */
+  /* not scroll, Escape closes and returns focus to the toggle.          */
   /* ------------------------------------------------------------------ */
   function initHeader() {
-    var btn = doc.querySelector('[data-menu-btn]'), sheet = doc.querySelector('[data-menu-sheet]');
-    if (!btn || !sheet) return;
-    function set(open) {
-      btn.setAttribute('aria-expanded', String(open)); btn.setAttribute('aria-label', open ? 'Close navigation' : 'Open navigation');
-      sheet.hidden = !open;
+    var root = doc.documentElement, header = $('#site-header'), toggle = $('#menu-btn'), sheet = $('#menu-sheet');
+    if (!header || !toggle || !sheet) return;
+    var open = false, outside = [$('#main'), $('.kfoot'), $('.k-skip')].filter(Boolean);
+    function sync() {
+      toggle.setAttribute('aria-expanded', String(open));
+      toggle.setAttribute('aria-label', open ? 'Close navigation' : 'Open navigation');
     }
-    btn.addEventListener('click', function () { set(btn.getAttribute('aria-expanded') !== 'true'); });
+    function set(o, returnFocus) {
+      if (o === open) return;
+      open = o; sync();
+      header.classList.toggle('is-open', o); sheet.classList.toggle('is-open', o);
+      root.classList.toggle('menu-locked', o);
+      outside.forEach(function (el) { el.inert = o; });
+      if (o) { var first = sheet.querySelector('.sheet__link'); if (first) requestAnimationFrame(function () { first.focus({ preventScroll: true }); }); }
+      else if (returnFocus) toggle.focus({ preventScroll: true });
+    }
+    toggle.addEventListener('click', function () { set(!open); });
     sheet.addEventListener('click', function (e) { if (e.target.closest('a')) set(false); });
-    doc.addEventListener('keydown', function (e) { if (e.key === 'Escape' && btn.getAttribute('aria-expanded') === 'true') { set(false); btn.focus(); } });
-    window.addEventListener('resize', function () { if (window.innerWidth >= 1024) set(false); });
+    doc.addEventListener('keydown', function (e) {
+      if (!open) return;
+      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); set(false, true); return; }
+      if (e.key !== 'Tab') return;
+      var list = $$('a[href], button:not([disabled])', header).concat($$('a[href], button:not([disabled])', sheet))
+        .filter(function (el) { return el.getClientRects().length > 0; });
+      if (!list.length) return;
+      // Move focus ourselves on every Tab: Safari skips links by default, so leaving it to the
+      // browser would let focus fall out of the sheet onto the (inert) page.
+      e.preventDefault();
+      var i = list.indexOf(doc.activeElement), n = list.length;
+      list[i === -1 ? (e.shiftKey ? n - 1 : 0) : (i + (e.shiftKey ? -1 : 1) + n) % n].focus();
+    }, true);
+    var mq = matchMedia('(min-width: 821px)');
+    var onMq = function (e) { if (e.matches) set(false); };
+    if (mq.addEventListener) mq.addEventListener('change', onMq); else if (mq.addListener) mq.addListener(onMq);
+    sync();
   }
 })();

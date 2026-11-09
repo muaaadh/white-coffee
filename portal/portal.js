@@ -95,10 +95,6 @@
     var s = Math.max(0, Math.ceil(ms / 1000));
     return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
   }
-  function greeting() {
-    var h = W.maleParts().h;
-    return h < 5 ? 'Good evening' : h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
-  }
   function tierClass(m) { return 'tier-' + W.tier(m).id; }
   /* Keep keyboard focus across re-renders: describe the focused control by a
      stable selector, then find its replacement after the HTML is rebuilt. */
@@ -172,6 +168,8 @@
   function keyTs(key, hour) { var a = String(key).split('-'); return Date.UTC(+a[0], +a[1] - 1, +a[2], hour || 0) - OFFSET_MS; }
   function keyParts(key) { var a = String(key).split('-'), d = new Date(Date.UTC(+a[0], +a[1] - 1, +a[2])); return { y: +a[0], mo: +a[1] - 1, d: +a[2], day: d.getUTCDay() }; }
   function hourLabel(h) { return W.fmt.clock(String(h).padStart(2, '0') + ':00'); }   // 24 -> "midnight"
+  /** "8:15 PM" never breaks between the time and AM/PM in a wrapping title. */
+  function keepTimes(s) { return String(s).replace(/(\d) (AM|PM)\b/g, '$1\u00a0$2'); }
   function bookingTimes(b) { return hourLabel(b.start) + ' to ' + hourLabel(b.start + b.hours); }
   function relDay(key) {
     var t = W.karaokeToday();
@@ -188,7 +186,20 @@
     return out;
   }
   function isUpcoming(b) { return (b.status === 'confirmed' || b.status === 'checked-in') && keyTs(b.date, b.start + b.hours) > Date.now(); }
-  function inRoomNow(b) { var now = Date.now(); return b.status !== 'cancelled' && b.status !== 'no-show' && keyTs(b.date, b.start) <= now && keyTs(b.date, b.start + b.hours) > now; }
+  function hasStarted(b) { return keyTs(b.date, b.start) <= Date.now(); }
+  // House rule on the booking page: a room is held 15 minutes past the start time.
+  var HOLD_MIN = 15;
+  function holdLabel(b) { return W.fmt.clock(String(b.start).padStart(2, '0') + ':' + String(HOLD_MIN).padStart(2, '0')); }
+  /** Where a booking stands inside its own hours: 'in-room' (staff checked them in), 'starting' (start passed,
+      room still held), 'late' (hold over, not checked in). Empty outside its hours. Only check-in means "in the room". */
+  function phase(b) {
+    var now = Date.now(), s = keyTs(b.date, b.start), e = keyTs(b.date, b.start + b.hours);
+    if (now < s || now >= e) return '';
+    if (b.status === 'checked-in') return 'in-room';
+    if (b.status === 'confirmed') return now < s + HOLD_MIN * 6e4 ? 'starting' : 'late';
+    return '';
+  }
+  function inRoomNow(b) { return phase(b) === 'in-room'; }
   function byWhen(a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : a.start - b.start; }
   function splitBookings(m) {
     var all = memberBookings(m);
@@ -203,10 +214,27 @@
     return a ? a.beans : 0;
   }
   function statusText(b) {
-    if (isUpcoming(b)) return inRoomNow(b) ? 'In the room now' : b.status === 'checked-in' ? 'Checked in' : 'Confirmed';
+    if (isUpcoming(b)) {
+      var ph = phase(b);
+      return ph === 'in-room' ? 'In the room now' : ph === 'starting' ? 'Starting now' : ph === 'late' ? 'Not checked in yet' :
+        b.status === 'checked-in' ? 'Checked in' : 'Confirmed';
+    }
     return { completed: 'Completed', cancelled: 'Cancelled', 'no-show': 'Missed', confirmed: 'Time passed', 'checked-in': 'Finished' }[b.status] || b.status;
   }
   function isKaraokeEarn(a) { return a.type === 'earn' && ((a.items && /^Karaoke:/i.test(a.items[0] || '')) || /^K-\d+$/.test(a.note || '')); }
+  /** The member's activity, plus a "booked" line for any booking on their card that the log has no entry for
+      (the demo seed creates bookings without one). Bookings are the record; the log only mirrors them. */
+  function memberActivity(m, limit) {
+    var list = W.activity(m.id), logged = {};
+    list.forEach(function (a) { if (a.code) logged[a.code] = 1; if (/^K-\d+$/.test(a.note || '')) logged[a.note] = 1; });
+    var cap = W.doc.seededAt || Date.now();
+    var extra = W.karaokeBookings({ memberId: m.id }).filter(function (b) { return !logged[b.id]; }).map(function (b) {
+      return { id: 'kb-' + b.id, type: 'booking', memberId: m.id, beans: 0, code: b.id, derived: true,
+        ts: Math.min(b.createdAt || cap, cap), note: 'Karaoke booked: ' + b.roomName + ', ' + W.karaokeDateLabel(b.date) + ' at ' + hourLabel(b.start) };
+    });
+    if (extra.length) list = list.concat(extra).sort(function (a, b) { return b.ts - a.ts; });
+    return limit ? list.slice(0, limit) : list;
+  }
 
   /* ------------------------------------------------------------------ */
   /* State                                                               */
@@ -405,7 +433,7 @@
   }
 
   /* ------------------------------------------------------------------ */
-  /* Side column (greeting, waiting reward, card)                        */
+  /* Side column (open status, card, waiting reward)                     */
   /* ------------------------------------------------------------------ */
   function renderSide(m, fresh) {
     var side = $('#side');
@@ -422,12 +450,12 @@
         '<div id="side-next"></div>';
       buildSideCard(m);
     }
+    // No greeting: the card carries the name. The column opens on a plain line about the café, then the card.
     var status = W.openStatus();
-    var heading = S.view === 'card' ? 'h1' : 'p';
     $('#side-head').innerHTML =
-      '<' + heading + ' class="greet"' + (heading === 'h1' ? ' tabindex="-1" data-focus' : '') + '>' + esc(greeting()) + ', ' + esc(firstName(m.name)) + '</' + heading + '>' +
+      (S.view === 'card' ? '<h1 class="visually-hidden" tabindex="-1" data-focus>Your White Rewards card</h1>' : '') +
       '<p class="open-status ' + (status.open ? 'is-open' : 'is-closed') + '"><span class="open-status__dot" aria-hidden="true"></span>' +
-        esc(status.label) + (status.detail ? ', ' + esc(status.detail) : '') + '</p>';
+        '<span>' + esc(status.label) + (status.detail ? (status.open ? ' ' : ', ') + esc(status.detail) : '') + '</span></p>';
     // The Rewards view lists ready codes itself; the code view is the code.
     var ready = S.view === 'rewards' ? [] : readyCodes(m).filter(function (r) { return !(S.view === 'code' && r.code === S.arg); });
     $('#side-wait').innerHTML = ready.map(function (r) {
@@ -597,12 +625,15 @@
   /* ---------- Card (home) ---------- */
   /** The next karaoke booking, as a strip of their leather. */
   function bookingStripHTML(b) {
-    var p = keyParts(b.date), now = inRoomNow(b), rel = relDay(b.date);
+    var p = keyParts(b.date), ph = phase(b), rel = relDay(b.date);
+    var label = ph === 'in-room' ? 'Karaoke, in the room now' : ph === 'starting' ? 'Karaoke, starting now' : ph === 'late' ? 'Karaoke, running late?' :
+      'Karaoke' + (rel ? ', ' + rel.toLowerCase() : '') + (b.status === 'checked-in' ? ', checked in' : '');
+    var when = ph === 'in-room' ? 'until ' + hourLabel(b.start + b.hours) : ph === 'starting' ? 'held until ' + holdLabel(b) : bookingTimes(b);
     return '<a class="kstrip on-leather" href="#karaoke">' +
       '<span class="kstrip__when" aria-hidden="true"><span class="kstrip__dow">' + DAYS_SHORT[p.day] + '</span><span class="kstrip__d num">' + p.d + '</span><span class="kstrip__mo">' + MONTHS_SHORT[p.mo] + '</span></span>' +
       '<span class="kstrip__main">' +
-        '<span class="kstrip__label">' + (now ? 'Karaoke, in the room now' : 'Karaoke' + (rel ? ', ' + rel.toLowerCase() : '') + (b.status === 'checked-in' ? ', checked in' : '')) + '</span>' +
-        '<span class="kstrip__title">' + esc(b.roomName) + ', ' + esc(now ? 'until ' + hourLabel(b.start + b.hours) : bookingTimes(b)) + '</span>' +
+        '<span class="kstrip__label">' + esc(label) + '</span>' +
+        '<span class="kstrip__title">' + esc(b.roomName) + ', ' + esc(keepTimes(when)) + '</span>' +
         '<span class="kstrip__sub"><span class="visually-hidden">' + esc(longDate(b.date)) + ', </span><span class="num">' + esc(b.id) + '</span>, ' + plural(b.guests, 'guest') + '</span>' +
       '</span>' +
       '<span class="kstrip__go">Manage' + icon('arrowRight') + '</span>' +
@@ -692,7 +723,7 @@
         }).join('') + '</ul>' +
       '</section>' : '';
 
-    var recent = W.activity(m.id, 3);
+    var recent = memberActivity(m, 3);
     var recentBlock = '' +
       '<section class="sect" aria-labelledby="recent-h">' +
         '<div class="sect__head"><h2 class="sect__h" id="recent-h">Recent activity</h2><a class="link-more" href="#activity">All activity' + icon('arrowRight') + '</a></div>' +
@@ -797,27 +828,39 @@
     var p = keyParts(b.date), up = isUpcoming(b), st = statusText(b);
     var beans = b.status === 'completed' && b.memberId === m.id ? bookingBeans(m, b) : 0;
     var sub = ['<span class="num">' + esc(b.id) + '</span>', plural(b.guests, 'guest'), '<span class="num">' + esc(F.mvr(b.total)) + '</span>'];
-    if (b.memberId !== m.id) sub.push('Booked with your number, not linked to your card');
+    // Why a booking earns no beans: its own line, so it wraps instead of being clipped with the meta row.
+    var note = b.memberId === m.id ? '' :
+      up ? 'Made with your number, not your card. Ask the team to link it for beans.' :
+      b.status === 'completed' ? 'Made with your number, not your card, so it earned no beans.' :
+      'Made with your number, not your card.';
     return '<li class="kbook' + (up ? ' is-up' : ' is-past') + ' is-' + esc(b.status) + '">' +
       '<span class="kbook__date num"><span class="kbook__dow">' + DAYS_SHORT[p.day] + '</span><span class="kbook__d">' + p.d + ' ' + MONTHS_SHORT[p.mo] + '</span></span>' +
       '<span class="kbook__main">' +
-        '<span class="kbook__title">' + esc(b.roomName) + ', ' + esc(bookingTimes(b)) + '</span>' +
+        '<span class="kbook__title">' + esc(b.roomName) + ', ' + esc(keepTimes(bookingTimes(b))) + '</span>' +
         '<span class="act__sub"><span class="act__subin">' + sub.map(function (s) { return '<span class="si">' + s + '</span>'; }).join('') + '</span></span>' +
+        (note ? '<span class="kbook__note">' + esc(note) + '</span>' : '') +
       '</span>' +
       '<span class="kbook__end">' +
         '<span class="kbook__status">' + esc(st) + '</span>' +
         (beans ? '<span class="kbook__beans num">+' + F.num(beans) + ' beans</span>' : '') +
-        (up && b.status === 'confirmed' ? '<button class="link-btn kbook__cancel" type="button" data-act="cancel-booking" data-id="' + esc(b.id) + '" aria-label="Cancel booking ' + esc(b.id) + '">Cancel</button>' : '') +
+        (up && b.status === 'confirmed' && !hasStarted(b) ? '<button class="link-btn kbook__cancel" type="button" data-act="cancel-booking" data-id="' + esc(b.id) + '" aria-label="Cancel booking ' + esc(b.id) + '">Cancel</button>' : '') +
       '</span>' +
     '</li>';
   }
 
   function ticketHTML(m, b) {
-    var p = keyParts(b.date), rel = relDay(b.date), now = inRoomNow(b);
+    var p = keyParts(b.date), rel = relDay(b.date), ph = phase(b);
     var linked = b.memberId === m.id;
+    var pay = linked ?
+      'Pay at the café, plus 10% service charge and 8% GST. You earn beans on the room bill.' :
+      'Booked with your phone number. Pay at the café, plus 10% service charge and 8% GST. Ask the team to link it to your card for beans.';
+    // Start time passed but staff have not checked them in: say what that means, not "in the room".
+    var timing = ph === 'starting' ? 'We hold the room until ' + holdLabel(b) + '. Show the reference ' + b.id + ' at the counter. ' :
+      ph === 'late' ? 'We held the room until ' + holdLabel(b) + '. On your way? Ask at the counter when you arrive. ' : '';
     return '<section class="ticket on-leather" aria-labelledby="ticket-h">' +
       '<div class="ticket__top">' +
-        '<p class="ticket__label">' + (now ? 'In the room now' : b.status === 'checked-in' ? 'Checked in' : 'Your next booking') + '</p>' +
+        '<p class="ticket__label">' + (ph === 'in-room' ? 'In the room now' : ph === 'starting' ? 'Starting now' : ph === 'late' ? 'Running late?' :
+          b.status === 'checked-in' ? 'Checked in' : 'Your next booking') + '</p>' +
         '<p class="ticket__ref num">' + esc(b.id) + '</p>' +
       '</div>' +
       '<h2 class="ticket__room" id="ticket-h">' + esc(b.roomName) + '</h2>' +
@@ -828,12 +871,10 @@
         '<div><dt>Guests</dt><dd class="num">' + F.num(b.guests) + '</dd></div>' +
         '<div><dt>Room bill</dt><dd class="num">' + esc(F.mvr(b.total)) + '</dd></div>' +
       '</dl>' +
-      '<p class="ticket__note">' + (linked ?
-        'Pay at the café, plus 10% service charge and 8% GST. You earn beans on the room bill.' :
-        'Booked with your phone number. Pay at the café, plus 10% service charge and 8% GST. Ask the team to link it to your card for beans.') + '</p>' +
+      '<p class="ticket__note">' + (timing ? '<strong>' + esc(timing) + '</strong>' : '') + esc(pay) + '</p>' +
       '<div class="ticket__actions">' +
         '<a class="btn btn--foil btn--sm" href="' + KARAOKE_PAGE + '?ref=' + encodeURIComponent(b.id) + '">Booking details</a>' +
-        (b.status === 'confirmed' && !now ? '<button class="btn btn--leather-ghost btn--sm" type="button" data-act="cancel-booking" data-id="' + esc(b.id) + '">Cancel booking</button>' : '') +
+        (b.status === 'confirmed' && !hasStarted(b) ? '<button class="btn btn--leather-ghost btn--sm" type="button" data-act="cancel-booking" data-id="' + esc(b.id) + '">Cancel booking</button>' : '') +
       '</div>' +
     '</section>';
   }
@@ -964,7 +1005,7 @@
   }
 
   VIEWS.activity = function (m) {
-    var all = W.activity(m.id);
+    var all = memberActivity(m);
     var list = all.filter(FILTERS[S.filter] || FILTERS.all);
     var now = W.maleParts();
     var month = all.filter(function (a) { var p = W.maleParts(a.ts); return p.y === now.y && p.mo === now.mo; });
@@ -1134,7 +1175,11 @@
     var m = W.currentMember();
     var memberChanged = syncMember(m);
     var v = h.view, arg = h.arg;
-    if (!m) { if (v !== 'join') v = 'signin'; }
+    if (!m) {
+      // A link to a tab (e.g. ../portal/#karaoke from the booking page) opens it after sign-in.
+      if (APP_VIEWS[v] && v !== 'code' && v !== 'card') S.after = v;
+      if (v !== 'join') v = 'signin';
+    }
     else if (!v || v === 'signin' || (!APP_VIEWS[v] && v !== 'join')) v = 'card';
     if (v !== h.view) { try { history.replaceState(null, '', '#' + v); } catch (e) { /* file:// */ } }
     var entering = v !== S.view || arg !== S.arg || memberChanged;
@@ -1353,7 +1398,10 @@
     syncMember(m);
     // Replace the sign-in / join entry, so Back from the card leaves the portal instead of
     // reopening a sign-in or join form for someone who is already signed in.
-    replaceHash('#card');
+    // A new member always lands on the card (the welcome sheet opens there).
+    var dest = !S.welcome && S.after ? '#' + S.after : '#card';
+    S.after = null;
+    replaceHash(dest);
     if (msg) toast(msg, { icon: 'card', sub: sub });
   }
 
@@ -1805,7 +1853,13 @@
       S.signin = { step: 'phone', local: '', error: '', notFound: false, busy: false };
       S.memberId = undefined;
       go(m ? '#card' : '#signin');
-      toast(info.remote ? 'The demo data was reset' : 'Demo data reset', { icon: 'refresh', sub: m ? '' : 'Sign in again to explore.' });
+      // A reset from the admin portal arrives as several writes (reset, then staff and member sessions put back),
+      // so wait for them before saying whether the visitor still has to sign in.
+      clearTimeout(S.resetToast);
+      S.resetToast = setTimeout(function () {
+        var who = W.currentMember();
+        toast(info.remote ? 'The demo data was reset' : 'Demo data reset', { icon: 'refresh', sub: who ? 'You’re still signed in as ' + who.name + '.' : 'Sign in again to explore.' });
+      }, info.remote ? 350 : 0);
       return;
     }
     if (!info.remote && info.reason === 'session') return;   // the action that signed in/out navigates itself
@@ -1836,7 +1890,7 @@
     if (expired) { W.redemptions(); refresh(); syncSheet(); }
   }, 1000);
 
-  /* Keep the greeting / open status fresh */
+  /* Keep the open status and karaoke timing fresh */
   setInterval(function () { if (!AUTH_VIEWS[S.view] && W.currentMember() && !openSheetState) refresh(); }, 60000);
 
   window.addEventListener('hashchange', route);

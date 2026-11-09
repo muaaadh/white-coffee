@@ -13,7 +13,7 @@
   'use strict';
 
   var KEY = 'wch.v1';
-  var VERSION = 4;
+  var VERSION = 5;
   var DAY = 864e5;
 
   /* ------------------------------------------------------------------ */
@@ -47,14 +47,14 @@
     { id: 'breakfast', name: 'Breakfast', group: 'food', photo: 'breakfast-spread' },
     { id: 'soups', name: 'Soups', group: 'food', photo: 'breakfast-spread' },
     { id: 'mains', name: 'Main dishes', group: 'food' },
-    { id: 'specials', name: 'House specials', group: 'food', photo: 'fried-noodles-rice' },
+    { id: 'specials', name: 'Special dishes', group: 'food', photo: 'fried-noodles-rice' },
     { id: 'pizza', name: 'Pizza', group: 'food' },
     { id: 'sandwiches', name: 'Sandwiches & bites', group: 'food', photo: 'wraps-sandwiches' },
     { id: 'salads', name: 'Salads', group: 'food', photo: 'fries-rings-salad' },
-    { id: 'sides', name: 'Sides', group: 'food', photo: 'fries-rings-salad' },
+    { id: 'sides', name: 'Side dishes', group: 'food', photo: 'fries-rings-salad' },
     { id: 'desserts', name: 'Desserts', group: 'food', photo: 'cookies-brownie' },
-    { id: 'hot', name: 'Hot drinks', group: 'drinks' },
-    { id: 'cold', name: 'Cold drinks', group: 'drinks' },
+    { id: 'hot', name: 'Hot beverages', group: 'drinks' },
+    { id: 'cold', name: 'Cold beverages', group: 'drinks' },
     { id: 'juice', name: 'Fresh juice', group: 'drinks', photo: 'milkshake-juice' },
     { id: 'shakes', name: 'Milkshakes', group: 'drinks', photo: 'milkshake-juice' },
     { id: 'soft', name: 'Soft drinks', group: 'drinks' }
@@ -83,7 +83,7 @@
     { id: 'tuna-pizza', cat: 'pizza', name: 'Tuna Pizza', desc: '', price: 120 },
     { id: 'pepperoni', cat: 'pizza', name: 'Pepperoni Pizza', desc: '', price: 130 },
     { id: 'tandoori-pizza', cat: 'pizza', name: 'Chicken Tandoori Pizza', desc: '', price: 130 },
-    { id: 'sandwich-platter', cat: 'sandwiches', name: 'Sandwich Platter', desc: 'Triangle sandwiches with creamy chicken or tuna, cheese and vegetables, with dipping sauces and fries', price: 115, photo: 'wraps-sandwiches', signature: true },
+    { id: 'sandwich-platter', cat: 'sandwiches', name: 'Sandwich Platter (Tuna or Chicken)', desc: 'Triangle sandwiches with creamy chicken or tuna, cheese and vegetables, with dipping sauces and fries', price: 115, photo: 'wraps-sandwiches', signature: true },
     { id: 'wraps', cat: 'sandwiches', name: 'Wraps', desc: 'Tortilla filled with chicken or beef, fresh vegetables and cheese', price: 95, photo: 'wraps-sandwiches' },
     { id: 'burger', cat: 'sandwiches', name: 'Burger', desc: 'Grilled chicken or beef burger with spicy fries and coleslaw', price: 115 },
     { id: 'fish-chips', cat: 'sandwiches', name: 'Fish & Chips', desc: 'Crumb-fried fish with fries, coleslaw and tartar sauce', price: 85 },
@@ -188,9 +188,9 @@
     maxHours: 4,
     daysAhead: 30,
     rooms: [
-      { id: 'cosy', name: 'Cosy room', capacity: 6, rate: 300, blurb: 'For birthdays, catch-ups and duets. Sofa seating, one big screen.', active: true },
-      { id: 'party', name: 'Party room', capacity: 12, rate: 500, blurb: 'Room for the whole group, two mics, mood lighting and a proper sound system.', active: true },
-      { id: 'vip', name: 'VIP room', capacity: 20, rate: 800, blurb: 'Our largest room, with a private service bell and the best sound in the house.', active: true }
+      { id: 'cosy', name: 'Cosy room', capacity: 6, rate: 300, blurb: 'Sofa seating for up to 6. Good for birthdays and duets.', active: true },
+      { id: 'party', name: 'Party room', capacity: 12, rate: 500, blurb: 'Space for 12, for office nights and big birthdays.', active: true },
+      { id: 'vip', name: 'VIP room', capacity: 20, rate: 800, blurb: 'Our biggest room, up to 20 people.', active: true }
     ],
     statuses: ['confirmed', 'checked-in', 'completed', 'cancelled', 'no-show']
   };
@@ -294,6 +294,7 @@
     doc.activity.sort(function (a, b) { return b.ts - a.ts; });
     doc.redemptions.sort(function (a, b) { return b.ts - a.ts; });
     seedKaraoke(doc, now, rnd);
+    doc.activity.sort(function (a, b) { return b.ts - a.ts; });
     return doc;
   }
 
@@ -373,7 +374,7 @@
   }
 
   function makeCode(doc, ts) {
-    var alphabet = 'ACDEFGHJKLMNPQRTUVWXY3479';
+    var alphabet = 'ACDEFGHJKLMNPQRTUVXY3479';   // no W, so codes never read W-W...
     var x = (ts ^ (doc.redemptions.length * 2654435761)) >>> 0, s = '';
     var rnd = mulberry32(x);
     for (var i = 0; i < 4; i++) s += alphabet[Math.floor(rnd() * alphabet.length)];
@@ -387,6 +388,7 @@
   function dateKeyToTs(key, hour) {   // Malé wall-clock -> UTC ms
     var a = key.split('-'); return Date.UTC(+a[0], +a[1] - 1, +a[2], hour || 0) - INFO.utcOffsetMinutes * 6e4;
   }
+  function dateLabel(key) { var p = maleParts(dateKeyToTs(key, 12)); return ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][p.day] + ' ' + p.d + ' ' + MONTHS[p.mo]; }
   function roomOf(doc, id) { return doc.karaoke.rooms.filter(function (r) { return r.id === id; })[0] || null; }
   function overlaps(b, roomId, date, start, hours) {
     return b.roomId === roomId && b.date === date && b.status !== 'cancelled' && b.status !== 'no-show' &&
@@ -411,15 +413,29 @@
       for (var k = 0; k < n; k++) {
         var room = doc.karaoke.rooms[Math.floor(rnd() * 3)];
         var hours = 1 + Math.floor(rnd() * 3), start = KARAOKE.open + Math.floor(rnd() * (KARAOKE.close - KARAOKE.open - hours + 1));
+        var forced = d === -4 && k === 0;           // the demo account (Aisha) gets one completed, linked hour in the Cosy room
+        if (forced) { room = doc.karaoke.rooms[0]; hours = 1; }
         var clash = doc.karaoke.bookings.some(function (b) { return overlaps(b, room.id, key, start, hours); });
         if (clash) continue;
         var who = names[Math.floor(rnd() * names.length)], mi = SEED_MEMBERS.indexOf(who);
+        if (forced) { who = SEED_MEMBERS[0]; mi = 0; }
         var member = doc.members[mi];
         var startTs = dateKeyToTs(key, start), endTs = startTs + hours * 36e5;
-        var status = endTs < now ? (rnd() < 0.9 ? 'completed' : 'no-show') : (startTs < now ? 'checked-in' : 'confirmed');
+        var status = endTs < now ? (rnd() < 0.9 || forced ? 'completed' : 'no-show') : (startTs < now ? 'checked-in' : 'confirmed');
+        var linked = rnd() < 0.7 || forced;
         var b = makeBooking(doc, { roomId: room.id, date: key, start: start, hours: hours, guests: Math.max(2, Math.floor(room.capacity * (0.4 + rnd() * 0.6))),
-          name: who[0], phone: who[1], email: who[2], memberId: rnd() < 0.7 ? member.id : null, status: status, source: rnd() < 0.75 ? 'Online' : 'Phone' }, startTs - (2 + rnd() * 5) * DAY);
+          name: who[0], phone: who[1], email: who[2], memberId: linked ? member.id : null, status: status, source: rnd() < 0.75 ? 'Online' : 'Phone' }, startTs - (2 + rnd() * 5) * DAY);
         if (rnd() < 0.15) b.notes = 'Birthday, please add candles';
+        if (b.createdAt > now - 36e5) b.createdAt = now - (2 + (b.start % 5)) * 36e5;   // never booked in the future
+        if (b.memberId) {
+          pushActivity(doc, { type: 'booking', memberId: b.memberId, beans: 0, note: 'Karaoke booked: ' + b.roomName + ', ' + dateLabel(b.date) + ' at ' + fmtClock(String(b.start).padStart(2, '0') + ':00'), code: b.id }, b.createdAt);
+          if (b.status === 'completed') {
+            var lastVisit = member.lastVisit;
+            earnInto(doc, member, { amount: b.total, drinks: 0, items: ['Karaoke: ' + b.roomName + ', ' + b.hours + ' h'], staff: STAFF[b.start % STAFF.length], note: b.id }, endTs);
+            member.lastVisit = Math.max(lastVisit || 0, endTs);
+            b.beansAwarded = true; b.updatedAt = endTs; b.updatedBy = STAFF[b.start % STAFF.length];
+          }
+        }
       }
     }
   }
@@ -677,6 +693,7 @@
       if ('mvrPerBean' in patch) { var v = Number(patch.mvrPerBean); if (!(v > 0)) throw new Error('MVR per bean must be more than 0'); p.mvrPerBean = v; }
       ['welcomeBonus', 'birthdayBonus', 'referralBonus', 'stampsForFree'].forEach(function (k) { if (k in patch) { var n = Math.round(Number(patch[k])); if (!(n >= 0)) throw new Error(k + ' must be 0 or more'); p[k] = n; } });
       if (p.stampsForFree < 2) p.stampsForFree = 2;
+      doc.members.forEach(function (m) { while (m.stamps >= p.stampsForFree) { m.stamps -= p.stampsForFree; m.freeDrinks += 1; } });
       if (patch.tiers) patch.tiers.forEach(function (t) { var ex = p.tiers.filter(function (x) { return x.id === t.id; })[0]; if (ex) { if ('min' in t) ex.min = Math.max(0, Math.round(Number(t.min) || 0)); if ('mult' in t) ex.mult = Math.max(1, Number(t.mult) || 1); } });
       p.tiers.sort(function (a, b) { return a.min - b.min; }); p.tiers[0].min = 0;
       commit('program'); return p;
@@ -696,7 +713,8 @@
       var s = { members: doc.members.length, newThisWeek: 0, visitsToday: 0, salesToday: 0, beansToday: 0, visitsWeek: 0, beansWeek: 0, salesWeek: 0, redemptionsWeek: 0, outstandingBeans: 0, readyCodes: 0, series: series, tiers: {}, topRewards: [] };
       doc.program.tiers.forEach(function (t) { s.tiers[t.id] = 0; });
       doc.members.forEach(function (m) { s.outstandingBeans += m.beans; s.tiers[tierOf(doc, m).id]++; if (m.joined >= weekAgo) s.newThisWeek++; });
-      var rewardCount = {};
+      var rewardCount = {}, voided = {};
+      doc.redemptions.forEach(function (r) { if (r.status === 'cancelled' || r.status === 'expired') voided[r.code] = true; });
       doc.activity.forEach(function (a) {
         var idx = Math.floor((startOfMaleDay(a.ts) - series[0].day) / DAY);
         var row = idx >= 0 && idx < series.length ? series[idx] : null;
@@ -704,7 +722,7 @@
           if (row) { row.visits++; row.beans += a.beans; row.sales += a.amount; }
           if (a.ts >= today) { s.visitsToday++; s.salesToday += a.amount; s.beansToday += a.beans; }
           if (a.ts >= weekAgo) { s.visitsWeek++; s.beansWeek += a.beans; s.salesWeek += a.amount; }
-        } else if (a.type === 'redeem') {
+        } else if (a.type === 'redeem' && !voided[a.code]) {
           if (row) row.redemptions++;
           if (a.ts >= weekAgo) s.redemptionsWeek++;
           rewardCount[a.note] = (rewardCount[a.note] || 0) + 1;
@@ -748,7 +766,7 @@
     /** Today's date key in Malé (YYYY-MM-DD) and helpers to move between days. */
     karaokeToday: function () { return maleDateKey(Date.now()); },
     karaokeAddDays: function (key, n) { return maleDateKey(dateKeyToTs(key, 12) + n * DAY); },
-    karaokeDateLabel: function (key) { var ts = dateKeyToTs(key, 12), p = maleParts(ts); return ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][p.day] + ' ' + p.d + ' ' + MONTHS[p.mo]; },
+    karaokeDateLabel: function (key) { return dateLabel(key); },
     /** Availability for one room on one date: [{hour, label, free, past, bookingId}] for every bookable start hour. */
     karaokeSlots: function (date, roomId) {
       var out = [], now = Date.now();
@@ -791,7 +809,7 @@
       if (b.memberId) pushActivity(doc, { type: 'booking', memberId: b.memberId, beans: 0, note: 'Karaoke booked: ' + b.roomName + ', ' + WCH.karaokeDateLabel(b.date) + ' at ' + fmtClock(String(b.start).padStart(2, '0') + ':00'), code: b.id }, Date.now());
       commit('karaoke-book'); return b;
     },
-    karaokeBooking: function (id) { id = String(id || '').trim().toUpperCase(); if (id && id.indexOf('K-') !== 0) id = 'K-' + id; return doc.karaoke.bookings.filter(function (b) { return b.id === id; })[0] || null; },
+    karaokeBooking: function (id) { var digits = String(id || '').replace(/\D/g, ''); id = digits ? 'K-' + digits : ''; return doc.karaoke.bookings.filter(function (b) { return b.id === id; })[0] || null; },
     /** Filter: { date, roomId, status, memberId, phone, from, to } — sorted by date + start. */
     karaokeBookings: function (f) {
       f = f || {}; var digits = f.phone ? String(f.phone).replace(/\D/g, '') : '';
@@ -829,7 +847,8 @@
       if (start + hours > KARAOKE.close || start < KARAOKE.open || hours < 1 || hours > KARAOKE.maxHours) throw new Error('That time does not fit');
       var clash = doc.karaoke.bookings.some(function (x) { return x !== b && overlaps(x, roomId, date, start, hours); });
       if (clash) throw new Error('That room is taken at that time');
-      var room = roomOf(doc, roomId); b.roomId = roomId; b.roomName = room.name; b.date = date; b.start = start; b.hours = hours; b.rate = room.rate; b.total = room.rate * hours;
+      var room = roomOf(doc, roomId); if (roomId !== b.roomId) b.rate = room.rate;   // same room keeps the rate it was booked at
+      b.roomId = roomId; b.roomName = room.name; b.date = date; b.start = start; b.hours = hours; b.total = b.rate * hours;
       b.updatedAt = Date.now(); commit('karaoke-move'); return b;
     },
     karaokeStats: function () {

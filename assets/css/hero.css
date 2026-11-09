@@ -7,39 +7,44 @@
      is-reduced           reduced motion      has-mark         saucer mark URL is set
      is-hinting           show the stir hint  is-stirred       visitor has stirred (hint fades)
      is-glint             one idle glint sweep across the gold rims
-   The open / closed pill (.hero__status > .status-pill) is site.css / site.js.
+   The live open / closed line lives in Visit (site.css / site.js), not in the hero.
    ========================================================================== */
 
+/* Desktop (960+): copy on the white page at the left; their photo runs from under the header to the bottom of the
+   screen and off the right edge; the cup sits on the photo's lower-left corner and runs off the bottom, the way
+   their opening poster crops the latte at the edge of the table. Below 960 it stacks: copy, photo, cup. */
 .hero {
+  --hp-w: min(50vw, calc((100svh - var(--header-h)) * .8), 900px);   /* photo width */
+  --cup: clamp(330px, 23vw + 110px, 520px);                           /* the latte visual */
   position: relative;
   min-height: 100vh; min-height: 100svh;
   display: flex; flex-direction: column;
   padding-top: var(--header-h);
-  background:
-    radial-gradient(50% 56% at 76% 46%, rgba(238, 235, 230, .7) 0%, rgba(238, 235, 230, 0) 70%),
-    var(--paper);
+  background: var(--paper);
   overflow: hidden;
   overflow: clip;
 }
 .hero__inner {
   flex: 1;
-  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  align-items: center; column-gap: clamp(1.5rem, 3vw, 3.5rem);
-  padding-block: clamp(1rem, 3vh, 2.5rem) clamp(.25rem, 1vh, 1rem);
+  display: grid; grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+  padding-block: clamp(2.5rem, 13vh, 8.5rem) 2rem;
 }
 
 /* ---------------------------------------------------------------- Copy */
-.hero__copy { position: relative; z-index: 2; max-width: 36rem; }
+.hero__copy {
+  position: relative; z-index: 3;
+  max-width: min(36rem, calc(100vw - var(--hp-w) - 2 * var(--gutter) - 1rem));
+}
 .hero__wordmark { display: none; font-size: .8125rem; letter-spacing: .08em; margin-bottom: 1rem; color: var(--gold-ink); }
 .hero__title {
   font-family: var(--font-display); font-weight: 400;
-  font-size: clamp(2.65rem, 0.9rem + 4.1vw, 4.6rem);
+  font-size: clamp(2.65rem, 1.1rem + 3.6vw, 4.4rem);
   line-height: 1.04; letter-spacing: -0.012em;
   color: var(--espresso);
 }
 .hero__line { display: block; white-space: nowrap; }
 .hero__line > span { display: inline-block; }
-.hero__line--gold { color: var(--gold); }
 .hero__lede {
   margin-top: clamp(1.1rem, 2.4vh, 1.6rem);
   max-width: 27rem;
@@ -48,16 +53,26 @@
 .hero__ctas { display: flex; flex-wrap: wrap; gap: .625rem; margin-top: clamp(1.5rem, 3.4vh, 2.25rem); }
 .hero__cta { min-height: 48px; padding-inline: 1.5rem; font-size: .9375rem; }
 .hero__cta-icon { width: 16px; height: 16px; fill: none; stroke: var(--gold); stroke-width: 1.4; stroke-linecap: round; }
-/* .hero__status (the live open / closed pill) is styled and animated by site.css + filled by site.js */
+
+/* ---------------------------------------------------------------- Photo */
+.hero__photo {
+  position: absolute; z-index: 0; top: var(--header-h); right: 0; bottom: 0;
+  width: var(--hp-w); margin: 0;
+  background: #EFEDEA;
+}
+.hero__photo img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 88%; }
 
 /* ---------------------------------------------------------------- Visual */
-.hero__visual { position: relative; z-index: 1; display: flex; justify-content: center; }
-.latte { width: 100%; display: flex; justify-content: center; will-change: transform; }   /* scroll parallax (hero.js) */
-.latte__enter {
-  flex: none;
-  width: min(100%, 680px, calc(100svh - var(--header-h) - 150px));
-  min-width: min(100%, 300px);
+/* hero.js measures the stage against this box, so it can sit anywhere */
+.hero__visual {
+  position: absolute; z-index: 2;
+  width: var(--cup);
+  left: calc(100% - var(--hp-w) - var(--cup) * .6);
+  bottom: calc(var(--cup) * -.24);
+  display: flex; justify-content: center;
 }
+.latte { width: 100%; display: flex; justify-content: center; will-change: transform; }   /* scroll parallax (hero.js) */
+.latte__enter { position: relative; flex: none; width: 100%; }
 .latte__stage {
   position: relative; width: 100%; aspect-ratio: 1 / 1;
   perspective: 1500px; perspective-origin: 50% 50%;
@@ -151,41 +166,12 @@
 .latte__cursor.is-on { opacity: 1; }
 .hero.is-touch .latte__cursor { display: none; }
 
-/* ---------------------------------------------------------------- Scroll cue */
-.hero__foot {
-  position: relative; z-index: 2;
-  display: flex; justify-content: center;
-  padding-bottom: clamp(.6rem, 2vh, 1.4rem);
-}
-.hero__cue {
-  display: inline-flex; flex-direction: column; align-items: center; gap: .45rem;
-  padding: .25rem .6rem;
-  border-radius: var(--r-sm);
-  color: var(--muted); text-decoration: none; font-size: var(--fs-xs); font-weight: 500;
-}
-.hero__cue:hover { color: var(--espresso); }
-.hero__cue-line {
-  position: relative; display: block; width: 1px; height: 32px; overflow: hidden;
-  background: var(--line-strong);
-}
-.hero__cue-line i {
-  position: absolute; left: -1px; top: 11px; width: 3px; height: 9px; border-radius: 2px;
-  background: var(--gold);
-}
-.hero__cue-label { order: -1; }
-
-/* ---------------------------------------------------------------- Motion (entrance, cue, glint) */
+/* ---------------------------------------------------------------- Motion (entrance, glint) */
 @keyframes wch-hero-rise { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
 @keyframes wch-hero-fade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes wch-hero-cup-in { from { opacity: 0; transform: scale(.965); } to { opacity: 1; transform: none; } }
 @keyframes wch-hero-draw-saucer { from { stroke-dashoffset: 610; } to { stroke-dashoffset: 0; } }
 @keyframes wch-hero-draw-cup { from { stroke-dashoffset: 386; } to { stroke-dashoffset: 0; } }
-@keyframes wch-hero-cue {
-  0% { transform: translateY(-21px); opacity: 0; }
-  20% { opacity: 1; }
-  70% { opacity: 1; }
-  100% { transform: translateY(24px); opacity: 0; }
-}
 @keyframes wch-hero-glint { from { transform: translate3d(-62%, -62%, 0); } to { transform: translate3d(62%, 62%, 0); } }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -197,53 +183,67 @@
   .js .hero__line:nth-child(3) > span { animation-delay: .30s; }
   .js .hero__lede { animation-delay: .45s; }
   .js .hero__ctas { animation-delay: .55s; }
-  .js .hero__foot { animation: wch-hero-fade 1s var(--ease-out) 1.4s both; }
 
   /* the cup fades in, its gold rims draw, then hero.js pours the latte */
   .js .latte__enter { animation: wch-hero-cup-in .75s var(--ease-out) .1s both; }
   .js .latte__rim--saucer { stroke-dasharray: 610 610; animation: wch-hero-draw-saucer 1.15s var(--ease-in-out) .3s both; }
   .js .latte__rim--cup { stroke-dasharray: 386 386; animation: wch-hero-draw-cup 1s var(--ease-in-out) .5s both; }
 
-  .hero__cue-line i { top: 0; animation: wch-hero-cue 2.4s var(--ease-in-out) infinite; }
 
   .hero.is-glint .latte__glint { opacity: 1; }
   .hero.is-glint .latte__glint::before { animation: wch-hero-glint 1.6s var(--ease-in-out) both; }
 }
 @media (prefers-reduced-motion: reduce) {
   .latte__coffee, .latte__mark, .latte__hint { transition: none; }
-  .hero__cue-line i { top: 12px; }           /* a still gold dot on the hairline */
 }
 
 /* ---------------------------------------------------------------- Responsive */
+/* desktop: the stir hint sits on the white page to the left of the cup, level with the coffee */
 @media (min-width: 960px) {
-  .latte__enter { width: min(108%, 640px, calc(100svh - var(--header-h) - 150px)); }
-}
-@media (min-width: 1440px) {
-  .hero__inner { grid-template-columns: minmax(0, .92fr) minmax(0, 1.08fr); }
-  .latte__enter { width: min(120%, 780px, calc(100svh - var(--header-h) - 160px)); }
+  .latte__hint {
+    position: absolute; top: 50%; right: 95%; margin: 0;
+    flex-direction: row-reverse; justify-content: flex-start;
+    white-space: nowrap; transform: translateY(-50%);
+  }
 }
 @media (min-width: 1600px) and (min-height: 960px) {
-  .hero__title { font-size: 4.95rem; }
+  .hero__title { font-size: 4.75rem; }
   .hero__lede { font-size: 1.1875rem; max-width: 29rem; }
 }
+/* short laptop screens: keep the copy clear of the cup */
+@media (min-width: 960px) and (max-height: 820px) {
+  .hero__inner { padding-top: clamp(1.75rem, 8vh, 4rem); }
+  .hero { --cup: clamp(300px, 19vw + 110px, 440px); }
+}
 @media (max-width: 959px) {
-  .hero__inner {
-    grid-template-columns: minmax(0, 1fr);
-    align-content: start; row-gap: clamp(.75rem, 2.5vh, 2rem);
-    padding-top: clamp(1.5rem, 4.5vh, 3rem);
-  }
+  .hero { min-height: 0; --cup: min(78vw, 440px); }
+  .hero__inner { display: block; padding-block: clamp(1.5rem, 4.5vh, 3rem) 0; }
   .hero__copy { max-width: 40rem; }
-  .latte__enter { width: min(100%, 520px); }
+  .hero__photo {
+    position: relative; top: auto; right: auto; bottom: auto; width: auto;
+    margin: clamp(2rem, 6vw, 3rem) calc(-1 * var(--gutter)) 0;
+    aspect-ratio: 4 / 5;            /* the whole plate pair, so the cup lands on the marble below them */
+  }
+  .hero__photo img { object-position: 50% 100%; }
+  .hero__visual {
+    position: relative; left: auto; bottom: auto;
+    margin: calc(var(--cup) * -.33 - 5rem) auto 0;   /* hero.js drifts the cup down ~0.14px per px scrolled: by the time it is on screen it sits about a third onto the photo */
+  }
+  .latte__hint { margin-top: -5%; padding-bottom: 1.5rem; }
+}
+/* tablets: the photo hangs off the right edge and the cup sits on its lower-left corner, as on desktop */
+@media (min-width: 600px) and (max-width: 959px) {
+  .hero { --cup: 360px; --tp-w: min(100% + var(--gutter), 540px); }
+  .hero__photo { width: var(--tp-w); margin-left: auto; margin-right: calc(-1 * var(--gutter)); }
+  .hero__visual { margin-left: max(0px, calc(100% + var(--gutter) - var(--tp-w) - var(--cup) * .55)); margin-top: calc(var(--cup) * -.45 - 3.5rem); }
 }
 @media (max-width: 600px) {
-  .hero__inner { row-gap: 0; padding-top: clamp(.75rem, 2.6vh, 2rem); }
+  .hero__inner { padding-top: clamp(.75rem, 2.6vh, 2rem); }
   .hero__wordmark { display: block; margin-bottom: .75rem; }
   .hero__lede { font-size: 1.0625rem; margin-top: 1rem; }
   .hero__ctas { gap: .5rem; margin-top: 1.4rem; }
   .hero__cta { padding-inline: 1.15rem; }
-  .latte__enter { margin-top: -4%; }          /* the stage's top margin is empty shadow room */
-  .latte__hint { margin-top: -7%; }
-  .hero__foot { display: none; }             /* the cup already runs to the fold on phones */
+  .hero__photo { margin-top: 1.75rem; }
 }
 @media (max-width: 380px) {
   .hero__cta { padding-inline: .95rem; }
